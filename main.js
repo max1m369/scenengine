@@ -3,22 +3,16 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { MeshBVH, acceleratedRaycast, StaticGeometryGenerator } from 'three-mesh-bvh';
+import { computeBoundsTree, disposeBoundsTree, acceleratedRaycast, MeshBVH, StaticGeometryGenerator } from 'three-mesh-bvh';
 import { Capsule } from 'three/examples/jsm/math/Capsule.js';
 
-// Apply accelerated raycast to Three.js BufferGeometry
-THREE.BufferGeometry.prototype.computeBoundsTree = function() {
-  this.boundsTree = new MeshBVH(this);
-};
-THREE.BufferGeometry.prototype.disposeBoundsTree = function() {
-  if (this.boundsTree) {
-    this.boundsTree = null;
-  }
-};
+// Setup accelerated BVH raycast and bounds tree on Three.js BufferGeometry
+THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
+THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
 
 /* ============================================================
-   WEB AUDIO SOUND SYNTHESIS (No external files needed)
+   WEB AUDIO SOUND SYNTHESIS
    ============================================================ */
 class SoundFX {
   constructor() {
@@ -86,11 +80,11 @@ const sfx = new SoundFX();
    ============================================================ */
 const container = document.getElementById('canvas-container');
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0a0f1d);
-scene.fog = new THREE.FogExp2(0x0a0f1d, 0.035);
+scene.background = new THREE.Color(0x080c14);
+scene.fog = new THREE.FogExp2(0x080c14, 0.035);
 
 const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.05, 100);
-camera.position.set(0, 1.6, 4.0); // Eye height = 1.6m, looking at stand
+camera.position.set(0, 1.6, 4.2);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -98,19 +92,19 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.2;
+renderer.toneMappingExposure = 1.25;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 container.appendChild(renderer.domElement);
 
 /* ============================================================
    EXHIBITION HALL ENVIRONMENT & LIGHTING
    ============================================================ */
-// 1. Ambient Lighting (Subtle cool fill)
-const ambientLight = new THREE.AmbientLight(0x88aaff, 0.6);
+// 1. Ambient Lighting (Cool blue fill)
+const ambientLight = new THREE.AmbientLight(0x99bbff, 0.85);
 scene.add(ambientLight);
 
-// 2. Main Key Sun/Ceiling Light (Casts soft directional shadows)
-const keyLight = new THREE.DirectionalLight(0xffffff, 2.0);
+// 2. Main Key Sun/Ceiling Light (Soft directional shadows)
+const keyLight = new THREE.DirectionalLight(0xffffff, 2.2);
 keyLight.position.set(4, 8, 5);
 keyLight.castShadow = true;
 keyLight.shadow.mapSize.width = 2048;
@@ -125,13 +119,13 @@ keyLight.shadow.bias = -0.0001;
 keyLight.shadow.normalBias = 0.02;
 scene.add(keyLight);
 
-// 3. Fill Light (Opposite side)
-const fillLight = new THREE.DirectionalLight(0x4488ee, 1.2);
+// 3. Fill Light
+const fillLight = new THREE.DirectionalLight(0x3a7bd5, 1.3);
 fillLight.position.set(-5, 6, -3);
 scene.add(fillLight);
 
-// 4. Exhibition Spotlights (Pointing directly onto exhibits from overhead truss)
-function createSpotlight(x, y, z, targetX, targetY, targetZ, color = 0xffffff, intensity = 4.0) {
+// 4. Exhibition Spotlights
+function createSpotlight(x, y, z, targetX, targetY, targetZ, color = 0xffffff, intensity = 4.5) {
   const spot = new THREE.SpotLight(color, intensity, 10, Math.PI / 4, 0.4, 1.5);
   spot.position.set(x, y, z);
   spot.target.position.set(targetX, targetY, targetZ);
@@ -140,42 +134,38 @@ function createSpotlight(x, y, z, targetX, targetY, targetZ, color = 0xffffff, i
   return spot;
 }
 
-// Left podium spotlight (Exploded motor)
-const spotLeft = createSpotlight(-1.0, 3.2, 0.8, -1.0, 0.8, 0.3, 0xeef5ff, 5.0);
-// Right podium spotlight (Assembled motor)
-const spotRight = createSpotlight(1.55, 3.2, 0.8, 1.55, 0.8, 0.3, 0xeef5ff, 5.0);
-// Wall logo spotlight
-const spotLogo = createSpotlight(-1.5, 3.0, 0.2, -1.55, 1.8, 0.74, 0x00d2ff, 3.5);
+const spotLeft = createSpotlight(-1.0, 3.2, 0.8, -1.0, 0.85, 0.3, 0xffffff, 6.0);
+const spotRight = createSpotlight(1.55, 3.2, 0.8, 1.55, 0.85, 0.3, 0xffffff, 6.0);
+const spotLogo = createSpotlight(-1.5, 3.0, 0.2, -1.55, 1.8, 0.74, 0x00d2ff, 4.0);
 
-// 5. Surrounding Exhibition Hall Floor with reflective grid
-const hallFloorGeo = new THREE.PlaneGeometry(50, 50, 60, 60);
+// 5. Exhibition Hall Floor with dark grid
+const hallFloorGeo = new THREE.PlaneGeometry(60, 60, 60, 60);
 const hallFloorMat = new THREE.MeshStandardMaterial({
-  color: 0x0c101c,
+  color: 0x0c111e,
   roughness: 0.25,
   metalness: 0.5,
 });
 const hallFloor = new THREE.Mesh(hallFloorGeo, hallFloorMat);
 hallFloor.rotation.x = -Math.PI / 2;
-hallFloor.position.y = -0.005; // Just below booth floor level (0.0)
+hallFloor.position.y = -0.002;
 hallFloor.receiveShadow = true;
 scene.add(hallFloor);
 
-// Hall grid lines helper
-const gridHelper = new THREE.GridHelper(50, 50, 0x00d2ff, 0x1a2638);
+const gridHelper = new THREE.GridHelper(60, 60, 0x00d2ff, 0x16243b);
 gridHelper.position.y = 0.001;
 scene.add(gridHelper);
 
 /* ============================================================
    CONTROLS SETUP: POINTER LOCK & ORBIT CONTROLS
    ============================================================ */
-let cameraMode = 'fps'; // 'fps' or 'orbit'
+let cameraMode = 'fps';
 const fpsControls = new PointerLockControls(camera, document.body);
 const orbitControls = new OrbitControls(camera, renderer.domElement);
 orbitControls.enableDamping = true;
 orbitControls.dampingFactor = 0.05;
-orbitControls.maxPolarAngle = Math.PI / 2 - 0.02; // Don't go below floor
+orbitControls.maxPolarAngle = Math.PI / 2 - 0.02;
 orbitControls.minDistance = 0.5;
-orbitControls.maxDistance = 15;
+orbitControls.maxDistance = 18;
 orbitControls.enabled = false;
 
 /* ============================================================
@@ -183,8 +173,8 @@ orbitControls.enabled = false;
    ============================================================ */
 const GRAVITY = 25;
 const playerCapsule = new Capsule(
-  new THREE.Vector3(0, 0.35, 4.0),
-  new THREE.Vector3(0, 1.35, 4.0),
+  new THREE.Vector3(0, 0.35, 4.2),
+  new THREE.Vector3(0, 1.35, 4.2),
   0.35
 );
 
@@ -208,7 +198,6 @@ const keyStates = {
   Space: false
 };
 
-// Keyboard Listeners
 document.addEventListener('keydown', (e) => {
   if (keyStates.hasOwnProperty(e.code)) {
     keyStates[e.code] = true;
@@ -382,7 +371,6 @@ const focusExhibitBtn = document.getElementById('focus-exhibit-btn');
 let activeHotspot = null;
 let currentFocusedExhibit = null;
 
-// Start button / Blocker click
 startBtn.addEventListener('click', () => {
   sfx.init();
   sfx.playWhoosh();
@@ -406,7 +394,6 @@ fpsControls.addEventListener('unlock', () => {
   reticle.classList.add('hidden');
 });
 
-// Close drawer
 closeDrawerBtn.addEventListener('click', () => {
   detailDrawer.classList.add('hidden');
   if (cameraMode === 'fps') {
@@ -414,7 +401,6 @@ closeDrawerBtn.addEventListener('click', () => {
   }
 });
 
-// Focus button in drawer
 focusExhibitBtn.addEventListener('click', () => {
   if (currentFocusedExhibit) {
     smoothTeleport(currentFocusedExhibit.cameraPos, currentFocusedExhibit.lookTarget);
@@ -441,7 +427,6 @@ function openExhibitDrawer(data) {
   }
   
   drawerFeatures.innerHTML = data.features.map(f => `<li>${f}</li>`).join('');
-  
   detailDrawer.classList.remove('hidden');
   if (fpsControls.isLocked) {
     fpsControls.unlock();
@@ -476,7 +461,6 @@ navChips.forEach(chip => {
   });
 });
 
-// Smooth Camera Teleport Interpolation
 let isTeleporting = false;
 let teleportStartPos = new THREE.Vector3();
 let teleportTargetPos = new THREE.Vector3();
@@ -491,7 +475,6 @@ function smoothTeleport(targetPos, targetLook) {
   teleportStartPos.copy(camera.position);
   teleportTargetPos.copy(targetPos);
   
-  // Set capsule position
   playerCapsule.start.set(targetPos.x, 0.35, targetPos.z);
   playerCapsule.end.set(targetPos.x, 1.35, targetPos.z);
   playerVelocity.set(0, 0, 0);
@@ -502,7 +485,6 @@ function smoothTeleport(targetPos, targetLook) {
   teleportTargetLook.copy(targetLook || targetPos);
 }
 
-// Mode & Light Buttons
 const cameraModeBtn = document.getElementById('camera-mode-btn');
 cameraModeBtn.addEventListener('click', toggleCameraMode);
 
@@ -526,34 +508,32 @@ function toggleCameraMode() {
   }
 }
 
-// Lighting Toggle (Day/Showcase Night)
 let isShowcaseNight = false;
 const lightingModeBtn = document.getElementById('lighting-mode-btn');
 lightingModeBtn.addEventListener('click', () => {
   isShowcaseNight = !isShowcaseNight;
   sfx.playChirp();
   if (isShowcaseNight) {
-    scene.background.set(0x04060a);
-    scene.fog.color.set(0x04060a);
-    ambientLight.intensity = 0.2;
+    scene.background.set(0x030508);
+    scene.fog.color.set(0x030508);
+    ambientLight.intensity = 0.25;
     keyLight.intensity = 0.8;
     fillLight.intensity = 0.4;
     spotLeft.intensity = 8.0;
     spotRight.intensity = 8.0;
     spotLogo.intensity = 6.0;
   } else {
-    scene.background.set(0x0a0f1d);
-    scene.fog.color.set(0x0a0f1d);
-    ambientLight.intensity = 0.6;
-    keyLight.intensity = 2.0;
-    fillLight.intensity = 1.2;
-    spotLeft.intensity = 5.0;
-    spotRight.intensity = 5.0;
-    spotLogo.intensity = 3.5;
+    scene.background.set(0x080c14);
+    scene.fog.color.set(0x080c14);
+    ambientLight.intensity = 0.85;
+    keyLight.intensity = 2.2;
+    fillLight.intensity = 1.3;
+    spotLeft.intensity = 6.0;
+    spotRight.intensity = 6.0;
+    spotLogo.intensity = 4.0;
   }
 });
 
-// Fullscreen Toggle
 const fullscreenBtn = document.getElementById('fullscreen-btn');
 fullscreenBtn.addEventListener('click', () => {
   if (!document.fullscreenElement) {
@@ -566,22 +546,24 @@ fullscreenBtn.addEventListener('click', () => {
 /* ============================================================
    LOAD 3D GLTF MODEL & BUILD BVH COLLIDER
    ============================================================ */
-const dracoLoader = new DRACOLoader();
-dracoLoader.setDecoderPath('./draco/gltf/'); // Local draco files in /public/draco/gltf/
-dracoLoader.setDecoderConfig({ type: 'js' });
-
 const gltfLoader = new GLTFLoader();
+
+// Optional Draco decoder fallback from CDN
+const dracoLoader = new DRACOLoader();
+dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/');
 gltfLoader.setDRACOLoader(dracoLoader);
 
-loadingStatus.textContent = 'Загрузка полигональной модели booth.glb...';
+loadingStatus.textContent = 'Загрузка 3D-модели стенда...';
+
+// Resolve model URL relative to Vite base
+const modelPath = `${import.meta.env.BASE_URL}booth.glb`;
 
 gltfLoader.load(
-  './booth.glb',
+  modelPath,
   (gltf) => {
     const model = gltf.scene;
     scene.add(model);
 
-    // Enhance materials and collect meshes for BVH
     const colliderMeshes = [];
 
     model.traverse((child) => {
@@ -590,9 +572,8 @@ gltfLoader.load(
         child.receiveShadow = true;
 
         if (child.material) {
-          child.material.roughness = Math.max(0.15, child.material.roughness || 0.4);
+          child.material.roughness = Math.max(0.2, child.material.roughness || 0.4);
           
-          // Enhance emissive textures/materials
           const matName = (child.material.name || '').toLowerCase();
           const objName = (child.name || '').toLowerCase();
           if (
@@ -603,32 +584,33 @@ gltfLoader.load(
             matName.includes('graphic') ||
             objName.includes('graphic')
           ) {
-            child.material.emissiveIntensity = 1.6;
+            child.material.emissiveIntensity = 2.0;
           }
         }
-
-        // Add to collision objects (excluding tiny screws/wires if necessary)
         colliderMeshes.push(child);
       }
     });
 
-    // Build unified static collision geometry for BVH
-    loadingStatus.textContent = 'Генерация структуры физических коллизий BVH...';
+    loadingStatus.textContent = 'Инициализация физики стенда...';
     
     try {
-      const staticGen = new StaticGeometryGenerator(colliderMeshes);
-      staticGen.attributes = ['position'];
-      const mergedGeometry = staticGen.generate();
-      mergedGeometry.computeBoundsTree();
-      
-      colliderMesh = new THREE.Mesh(mergedGeometry);
-      bvhCollider = mergedGeometry.boundsTree;
-      console.log('BVH Collider successfully constructed with bounds tree!');
+      if (colliderMeshes.length > 0) {
+        const staticGen = new StaticGeometryGenerator(colliderMeshes);
+        staticGen.attributes = ['position'];
+        const mergedGeometry = staticGen.generate();
+        mergedGeometry.computeBoundsTree();
+        
+        colliderMesh = new THREE.Mesh(mergedGeometry);
+        bvhCollider = mergedGeometry.boundsTree;
+      }
     } catch(err) {
-      console.warn('BVH generation notice:', err);
+      console.warn('BVH collider notice:', err);
     }
 
-    // Hide Loading Screen
+    progressBar.style.width = '100%';
+    loadingPercent.textContent = '100%';
+    loadingStatus.textContent = 'Готово к просмотру!';
+
     setTimeout(() => {
       loadingScreen.style.opacity = '0';
       setTimeout(() => {
@@ -637,20 +619,27 @@ gltfLoader.load(
     }, 400);
   },
   (xhr) => {
-    if (xhr.lengthComputable) {
-      const percent = Math.round((xhr.loaded / xhr.total) * 100);
+    if (xhr.lengthComputable && xhr.total > 0) {
+      const percent = Math.min(99, Math.round((xhr.loaded / xhr.total) * 100));
       progressBar.style.width = percent + '%';
       loadingPercent.textContent = percent + '%';
+    } else {
+      // Indeterminate progress animation
+      const current = parseInt(loadingPercent.textContent) || 0;
+      if (current < 90) {
+        const next = current + 15;
+        progressBar.style.width = next + '%';
+        loadingPercent.textContent = next + '%';
+      }
     }
   },
   (error) => {
-    console.error('Error loading booth.glb:', error);
-    loadingStatus.textContent = 'Попытка загрузки booth_raw.glb...';
-    // Fallback to uncompressed glb
-    gltfLoader.load('./booth_raw.glb', (gltf) => {
-      scene.add(gltf.scene);
+    console.error('Error loading booth model:', error);
+    loadingStatus.textContent = 'Ошибка загрузки модели. Проверьте консоль.';
+    // Fallback unhide screen so user can still see scene
+    setTimeout(() => {
       loadingScreen.classList.add('hidden');
-    });
+    }, 2000);
   }
 );
 
@@ -660,19 +649,15 @@ gltfLoader.load(
 function updatePlayer(delta) {
   if (cameraMode !== 'fps' || isTeleporting) return;
 
-  // Move speed
-  let moveSpeed = keyStates.ShiftLeft || keyStates.ShiftRight ? 5.0 : 2.8;
+  let moveSpeed = keyStates.ShiftLeft || keyStates.ShiftRight ? 5.2 : 2.9;
 
-  // Damping
   const damping = Math.exp(-4 * delta) - 1;
   playerVelocity.addScaledVector(playerVelocity, damping);
 
-  // Gravity
   if (!playerOnFloor) {
     playerVelocity.y -= GRAVITY * delta;
   }
 
-  // Direction vector from camera view
   playerDirection.set(0, 0, 0);
   const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
   forward.y = 0;
@@ -691,19 +676,16 @@ function updatePlayer(delta) {
     playerDirection.normalize();
     playerVelocity.addScaledVector(playerDirection, moveSpeed * delta * 20);
     
-    // Footstep sound interval
     if (playerOnFloor && Math.random() < 0.05) {
       sfx.playStep();
     }
   }
 
-  // Jump
   if (playerOnFloor && keyStates.Space) {
     playerVelocity.y = 7.5;
     playerOnFloor = false;
   }
 
-  // Integrate velocity into capsule position
   const deltaVector = playerVelocity.clone().multiplyScalar(delta);
   playerCapsule.translate(deltaVector);
 
@@ -711,17 +693,13 @@ function updatePlayer(delta) {
   playerOnFloor = false;
   if (colliderMesh && bvhCollider) {
     const tempBox = new THREE.Box3();
-    const tempMat = new THREE.Matrix4();
-    const tempSegment = new THREE.Line3();
 
-    // Check capsule vs BVH tree
     bvhCollider.shapecast({
       intersectsBounds: box => box.intersectsBox(tempBox.setFromCenterAndSize(
         playerCapsule.getCenter(new THREE.Vector3()),
         new THREE.Vector3(playerCapsule.radius * 2, playerCapsule.radius * 2 + 1.0, playerCapsule.radius * 2)
       )),
       intersectsTriangle: tri => {
-        // Find closest point between player capsule segment and triangle
         const triPoint = new THREE.Vector3();
         const capsulePoint = new THREE.Vector3();
 
@@ -742,7 +720,7 @@ function updatePlayer(delta) {
     });
   }
 
-  // Floor baseline (hall floor level)
+  // Floor boundary level
   if (playerCapsule.start.y < 0.35) {
     playerCapsule.start.y = 0.35;
     playerCapsule.end.y = 1.35;
@@ -750,13 +728,12 @@ function updatePlayer(delta) {
     playerOnFloor = true;
   }
 
-  // Keep player inside exhibition pavilion boundaries (X: [-15, 15], Z: [-10, 15])
+  // Pavilion boundaries
   playerCapsule.start.x = THREE.MathUtils.clamp(playerCapsule.start.x, -15, 15);
   playerCapsule.end.x = THREE.MathUtils.clamp(playerCapsule.end.x, -15, 15);
   playerCapsule.start.z = THREE.MathUtils.clamp(playerCapsule.start.z, -10, 15);
   playerCapsule.end.z = THREE.MathUtils.clamp(playerCapsule.end.z, -10, 15);
 
-  // Sync camera position with top of capsule
   camera.position.copy(playerCapsule.end).add(new THREE.Vector3(0, 0.25, 0));
 }
 
@@ -764,8 +741,6 @@ function updatePlayer(delta) {
    HOTSPOT PROJECTION & INTERACTION RAYCASTING
    ============================================================ */
 const screenPos = new THREE.Vector3();
-const raycaster = new THREE.Raycaster();
-const centerScreen = new THREE.Vector2(0, 0);
 
 function updateHotspots() {
   let closestDist = Infinity;
@@ -774,16 +749,13 @@ function updateHotspots() {
   hotspotElements.forEach(({ el, data }) => {
     screenPos.copy(data.worldPos);
     
-    // Distance to camera
     const dist = camera.position.distanceTo(data.worldPos);
-    
-    // Project to screen space
     screenPos.project(camera);
 
     const isBehind = screenPos.z > 1.0;
     const isOutOfView = Math.abs(screenPos.x) > 1.1 || Math.abs(screenPos.y) > 1.1;
 
-    if (isBehind || isOutOfView || dist > 10.0) {
+    if (isBehind || isOutOfView || dist > 12.0) {
       el.style.display = 'none';
     } else {
       el.style.display = 'flex';
@@ -792,13 +764,11 @@ function updateHotspots() {
       el.style.left = `${x}px`;
       el.style.top = `${y}px`;
 
-      // Scale marker based on distance
       const scale = THREE.MathUtils.clamp(1.0 - (dist - 1.5) * 0.08, 0.65, 1.1);
       el.style.transform = `translate(-50%, -50%) scale(${scale})`;
 
-      // Distance from screen center (for crosshair highlight)
       const distFromCenter = Math.hypot(screenPos.x, screenPos.y);
-      if (distFromCenter < 0.22 && dist < 4.5 && dist < closestDist) {
+      if (distFromCenter < 0.22 && dist < 5.0 && dist < closestDist) {
         closestDist = dist;
         hoveredHotspot = data;
       }
@@ -829,7 +799,6 @@ function animate() {
   const delta = Math.min(clock.getDelta(), 0.1);
   const now = performance.now();
 
-  // FPS Counter
   frameCount++;
   if (now - lastFpsTime >= 1000) {
     fpsCounter.textContent = `${frameCount} FPS`;
@@ -837,7 +806,6 @@ function animate() {
     lastFpsTime = now;
   }
 
-  // Smooth Teleport Lerp
   if (isTeleporting) {
     teleportProgress += delta * 2.2;
     const t = THREE.MathUtils.smoothstep(teleportProgress, 0, 1);
@@ -854,17 +822,14 @@ function animate() {
       }
     }
   } else {
-    // Player movement update
     updatePlayer(delta);
     if (cameraMode === 'orbit') {
       orbitControls.update();
     }
   }
 
-  // Update 3D interactive hotspot positions
   updateHotspots();
 
-  // Subtle pulsing animation on spotlights
   const time = clock.getElapsedTime();
   spotLeft.position.y = 3.2 + Math.sin(time * 0.8) * 0.05;
   spotRight.position.y = 3.2 + Math.cos(time * 0.8) * 0.05;
