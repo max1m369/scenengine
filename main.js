@@ -1,23 +1,16 @@
 ﻿import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { computeBoundsTree, disposeBoundsTree, acceleratedRaycast, MeshBVH, StaticGeometryGenerator } from 'three-mesh-bvh';
-import { Capsule } from 'three/examples/jsm/math/Capsule.js';
-
-// Setup accelerated BVH
-THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
-THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
-THREE.Mesh.prototype.raycast = acceleratedRaycast;
 
 /* ============================================================
    SCENE, CAMERA, RENDERER INITIALIZATION
    ============================================================ */
 const container = document.getElementById('canvas-container');
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0e1422);
-scene.fog = new THREE.FogExp2(0x0e1422, 0.02);
+scene.background = new THREE.Color(0x0a0f1d);
+scene.fog = new THREE.FogExp2(0x0a0f1d, 0.018);
 
 // Standard Human Eye Height = 1.6m
-const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.05, 100);
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.05, 100);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -25,38 +18,38 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.4;
+renderer.toneMappingExposure = 1.45;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 container.appendChild(renderer.domElement);
 
 /* ============================================================
-   EXHIBITION HALL ENVIRONMENT & LIGHTING
+   EXHIBITION HALL LIGHTING & ENVIRONMENT
    ============================================================ */
-const ambientLight = new THREE.AmbientLight(0xffffff, 1.4);
+const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
 scene.add(ambientLight);
 
-const keyLight = new THREE.DirectionalLight(0xffffff, 2.8);
-keyLight.position.set(5, 10, 8);
+const keyLight = new THREE.DirectionalLight(0xffffff, 3.0);
+keyLight.position.set(6, 12, 8);
 keyLight.castShadow = true;
 keyLight.shadow.mapSize.width = 2048;
 keyLight.shadow.mapSize.height = 2048;
 keyLight.shadow.camera.near = 0.5;
-keyLight.shadow.camera.far = 30;
-keyLight.shadow.camera.left = -8;
-keyLight.shadow.camera.right = 8;
-keyLight.shadow.camera.top = 8;
-keyLight.shadow.camera.bottom = -6;
+keyLight.shadow.camera.far = 35;
+keyLight.shadow.camera.left = -9;
+keyLight.shadow.camera.right = 9;
+keyLight.shadow.camera.top = 9;
+keyLight.shadow.camera.bottom = -7;
 keyLight.shadow.bias = -0.0001;
 keyLight.shadow.normalBias = 0.02;
 scene.add(keyLight);
 
-const fillLight = new THREE.DirectionalLight(0x66aaff, 1.8);
-fillLight.position.set(-6, 8, -4);
+const fillLight = new THREE.DirectionalLight(0x5599ff, 2.0);
+fillLight.position.set(-7, 9, -4);
 scene.add(fillLight);
 
 // Truss Spotlights
-function createSpotlight(x, y, z, targetX, targetY, targetZ, color = 0xffffff, intensity = 8.0) {
-  const spot = new THREE.SpotLight(color, intensity, 15, Math.PI / 3, 0.35, 1.2);
+function createSpotlight(x, y, z, targetX, targetY, targetZ, color = 0xffffff, intensity = 9.0) {
+  const spot = new THREE.SpotLight(color, intensity, 16, Math.PI / 3, 0.35, 1.2);
   spot.position.set(x, y, z);
   spot.target.position.set(targetX, targetY, targetZ);
   scene.add(spot);
@@ -64,25 +57,25 @@ function createSpotlight(x, y, z, targetX, targetY, targetZ, color = 0xffffff, i
   return spot;
 }
 
-const spotLeft = createSpotlight(-1.0, 3.5, 0.5, -1.0, 0.85, -0.29, 0xffffff, 8.0);
-const spotRight = createSpotlight(1.55, 3.5, 0.5, 1.55, 0.85, -0.29, 0xffffff, 8.0);
-const spotLogo = createSpotlight(-1.5, 3.0, 0.5, -1.55, 1.8, -0.74, 0x00d2ff, 6.0);
+const spotLeft = createSpotlight(-1.0, 3.5, 0.5, -1.0, 0.85, -0.29, 0xffffff, 9.0);
+const spotRight = createSpotlight(1.55, 3.5, 0.5, 1.55, 0.85, -0.29, 0xffffff, 9.0);
+const spotLogo = createSpotlight(-1.5, 3.0, 0.5, -1.55, 1.8, -0.74, 0x00d2ff, 7.0);
 
 // Point lights
-const pointLeft = new THREE.PointLight(0x00d2ff, 2.0, 5);
+const pointLeft = new THREE.PointLight(0x00d2ff, 2.5, 5);
 pointLeft.position.set(-1.0, 1.2, 0.5);
 scene.add(pointLeft);
 
-const pointRight = new THREE.PointLight(0x00d2ff, 2.0, 5);
+const pointRight = new THREE.PointLight(0x00d2ff, 2.5, 5);
 pointRight.position.set(1.55, 1.2, 0.5);
 scene.add(pointRight);
 
 // Exhibition Hall Floor
-const hallFloorGeo = new THREE.PlaneGeometry(80, 80, 80, 80);
+const hallFloorGeo = new THREE.PlaneGeometry(100, 100, 100, 100);
 const hallFloorMat = new THREE.MeshStandardMaterial({
-  color: 0x111728,
-  roughness: 0.2,
-  metalness: 0.6,
+  color: 0x0d1322,
+  roughness: 0.25,
+  metalness: 0.5,
 });
 const hallFloor = new THREE.Mesh(hallFloorGeo, hallFloorMat);
 hallFloor.rotation.x = -Math.PI / 2;
@@ -90,108 +83,123 @@ hallFloor.position.y = -0.001;
 hallFloor.receiveShadow = true;
 scene.add(hallFloor);
 
-const gridHelper = new THREE.GridHelper(80, 80, 0x00d2ff, 0x1f2b42);
+const gridHelper = new THREE.GridHelper(100, 100, 0x00d2ff, 0x182438);
 gridHelper.position.y = 0.001;
 scene.add(gridHelper);
 
 /* ============================================================
-   FIRST-PERSON PLAYER & COLLISION ENGINE
+   ROCK-SOLID FIRST-PERSON CONTROLLER & PHYSICS
    ============================================================ */
-const GRAVITY = 25;
-const playerCapsule = new Capsule(
-  new THREE.Vector3(0, 0.35, 5.0),
-  new THREE.Vector3(0, 1.35, 5.0),
-  0.35
-);
+const player = {
+  pos: new THREE.Vector3(0, 1.6, 4.8), // Start at X=0, Y=1.6 (Eye level), Z=4.8 (In front of booth)
+  velocity: new THREE.Vector3(0, 0, 0),
+  pitch: -0.04, // slight downward gaze
+  yaw: 0.0,
+  radius: 0.35,
+  height: 1.6,
+  onGround: true
+};
 
-let playerVelocity = new THREE.Vector3();
-let playerDirection = new THREE.Vector3();
-let playerOnFloor = false;
-let colliderMesh = null;
-let bvhCollider = null;
+function updateCamera() {
+  // Ensure no NaNs
+  if (isNaN(player.pos.x) || isNaN(player.pos.y) || isNaN(player.pos.z)) {
+    player.pos.set(0, 1.6, 4.8);
+  }
+  if (isNaN(player.pitch)) player.pitch = 0;
+  if (isNaN(player.yaw)) player.yaw = 0;
 
-// Camera Orientation (Pitch / Yaw)
-let cameraPitch = -0.05;
-let cameraYaw = 0.0;
-
-function resetCamera() {
-  playerCapsule.start.set(0, 0.35, 5.0);
-  playerCapsule.end.set(0, 1.35, 5.0);
-  playerVelocity.set(0, 0, 0);
-  cameraPitch = -0.05;
-  cameraYaw = 0.0;
-  updateCameraRotation();
-  camera.position.set(0, 1.6, 5.0);
-}
-
-function updateCameraRotation() {
-  const euler = new THREE.Euler(cameraPitch, cameraYaw, 0, 'YXZ');
+  const euler = new THREE.Euler(player.pitch, player.yaw, 0, 'YXZ');
   camera.quaternion.setFromEuler(euler);
+  camera.position.copy(player.pos);
 }
 
-resetCamera();
+function resetPlayerView() {
+  player.pos.set(0, 1.6, 4.8);
+  player.velocity.set(0, 0, 0);
+  player.pitch = -0.04;
+  player.yaw = 0.0;
+  updateCamera();
+}
 
-// Free Mouse Drag Look (Left Click + Drag)
-let isDraggingMouse = false;
+resetPlayerView();
+
+// Mouse Look (Drag or Pointer Lock)
+let isPointerLocked = false;
+let isDragging = false;
 let mouseStartX = 0;
 let mouseStartY = 0;
 
+// Drag to look
 renderer.domElement.addEventListener('mousedown', (e) => {
-  isDraggingMouse = true;
-  mouseStartX = e.clientX;
-  mouseStartY = e.clientY;
+  if (e.button === 0) { // Left click
+    isDragging = true;
+    mouseStartX = e.clientX;
+    mouseStartY = e.clientY;
+  }
 });
 
 window.addEventListener('mouseup', () => {
-  isDraggingMouse = false;
+  isDragging = false;
 });
 
 window.addEventListener('mousemove', (e) => {
-  if (isDraggingMouse) {
+  if (isPointerLocked) {
+    player.yaw -= e.movementX * 0.0025;
+    player.pitch -= e.movementY * 0.0025;
+    player.pitch = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, player.pitch));
+    updateCamera();
+  } else if (isDragging) {
     const deltaX = e.clientX - mouseStartX;
     const deltaY = e.clientY - mouseStartY;
     mouseStartX = e.clientX;
     mouseStartY = e.clientY;
 
-    cameraYaw -= deltaX * 0.0035;
-    cameraPitch -= deltaY * 0.0035;
-    cameraPitch = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, cameraPitch));
-
-    updateCameraRotation();
+    player.yaw -= deltaX * 0.0035;
+    player.pitch -= deltaY * 0.0035;
+    player.pitch = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, player.pitch));
+    updateCamera();
   }
 });
 
-// Touch controls for mobile/tablet
+// Double click to request pointer lock (optional FPS mode)
+renderer.domElement.addEventListener('dblclick', () => {
+  renderer.domElement.requestPointerLock().catch(() => {});
+});
+
+document.addEventListener('pointerlockchange', () => {
+  isPointerLocked = (document.pointerLockElement === renderer.domElement);
+});
+
+// Touch controls for mobile
 let touchStartX = 0;
 let touchStartY = 0;
 renderer.domElement.addEventListener('touchstart', (e) => {
   if (e.touches.length === 1) {
-    isDraggingMouse = true;
+    isDragging = true;
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
   }
 }, { passive: true });
 
 renderer.domElement.addEventListener('touchmove', (e) => {
-  if (isDraggingMouse && e.touches.length === 1) {
+  if (isDragging && e.touches.length === 1) {
     const deltaX = e.touches[0].clientX - touchStartX;
     const deltaY = e.touches[0].clientY - touchStartY;
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
 
-    cameraYaw -= deltaX * 0.004;
-    cameraPitch -= deltaY * 0.004;
-    cameraPitch = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, cameraPitch));
-
-    updateCameraRotation();
+    player.yaw -= deltaX * 0.004;
+    player.pitch -= deltaY * 0.004;
+    player.pitch = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, player.pitch));
+    updateCamera();
   }
 }, { passive: true });
 
 window.addEventListener('touchend', () => {
-  isDraggingMouse = false;
+  isDragging = false;
 });
 
-// Keyboard Input (English + Russian layout + Arrow keys)
+// Keyboard Input (English + Russian + Arrow keys)
 const keys = {
   forward: false,
   backward: false,
@@ -211,6 +219,10 @@ window.addEventListener('keydown', (e) => {
   if (code === 'KeyD' || key === 'd' || key === 'в' || code === 'ArrowRight') keys.right = true;
   if (code === 'ShiftLeft' || code === 'ShiftRight' || e.shiftKey) keys.sprint = true;
   if (code === 'Space' || key === ' ') keys.jump = true;
+
+  if (code === 'KeyR' || key === 'r' || key === 'к') {
+    resetPlayerView();
+  }
 });
 
 window.addEventListener('keyup', (e) => {
@@ -226,7 +238,48 @@ window.addEventListener('keyup', (e) => {
 });
 
 /* ============================================================
-   UI & BUTTON HANDLERS
+   COLLISION BOXES (PODIUMS & BACKDROP WALL)
+   ============================================================ */
+// Stand collision obstacles (AABB with radius padding)
+const obstacles = [
+  // Left Podium (Exploded motor)
+  { minX: -2.15, maxX: 0.15, minZ: -0.80, maxZ: 0.35, minY: 0, maxY: 1.0 },
+  // Right Podium (Assembled motor)
+  { minX: 0.95, maxX: 2.15, minZ: -0.80, maxZ: 0.35, minY: 0, maxY: 1.0 },
+  // Backdrop Wall
+  { minX: -2.80, maxX: 2.80, minZ: -1.20, maxZ: -0.65, minY: 0, maxY: 3.0 }
+];
+
+function resolveCollisions(pos, radius) {
+  for (const obs of obstacles) {
+    // Check Y overlap
+    if (pos.y - player.height + 0.2 < obs.maxY && pos.y > obs.minY) {
+      // Expanded bounding box by player radius
+      const expandedMinX = obs.minX - radius;
+      const expandedMaxX = obs.maxX + radius;
+      const expandedMinZ = obs.minZ - radius;
+      const expandedMaxZ = obs.maxZ + radius;
+
+      if (pos.x > expandedMinX && pos.x < expandedMaxX && pos.z > expandedMinZ && pos.z < expandedMaxZ) {
+        // Calculate penetration depths along each side
+        const dLeft = pos.x - expandedMinX;
+        const dRight = expandedMaxX - pos.x;
+        const dBack = pos.z - expandedMinZ;
+        const dFront = expandedMaxZ - pos.z;
+
+        const minOverlap = Math.min(dLeft, dRight, dBack, dFront);
+
+        if (minOverlap === dLeft) pos.x = expandedMinX;
+        else if (minOverlap === dRight) pos.x = expandedMaxX;
+        else if (minOverlap === dFront) pos.z = expandedMaxZ;
+        else if (minOverlap === dBack) pos.z = expandedMinZ;
+      }
+    }
+  }
+}
+
+/* ============================================================
+   UI BUTTONS
    ============================================================ */
 const loadingScreen = document.getElementById('loading-screen');
 const progressBar = document.getElementById('progress-bar');
@@ -237,9 +290,7 @@ const resetCamBtn = document.getElementById('reset-cam-btn');
 const fullscreenBtn = document.getElementById('fullscreen-btn');
 
 if (resetCamBtn) {
-  resetCamBtn.addEventListener('click', () => {
-    resetCamera();
-  });
+  resetCamBtn.addEventListener('click', resetPlayerView);
 }
 
 if (fullscreenBtn) {
@@ -266,11 +317,11 @@ function hideLoadingScreen() {
 }
 
 /* ============================================================
-   LOAD 3D GLTF MODEL & BUILD BVH COLLIDER
+   LOAD 3D GLTF MODEL
    ============================================================ */
 const gltfLoader = new GLTFLoader();
 const modelPath = './booth.glb';
-console.log(`[GLTF] Loading exhibition model from: ${modelPath}`);
+console.log(`[GLTF] Loading exhibition stand from: ${modelPath}`);
 
 gltfLoader.load(
   modelPath,
@@ -303,21 +354,6 @@ gltfLoader.load(
       }
     });
 
-    try {
-      const staticGen = new StaticGeometryGenerator(model);
-      staticGen.attributes = ['position'];
-      const mergedGeometry = staticGen.generate();
-      mergedGeometry.computeBoundsTree = computeBoundsTree;
-      mergedGeometry.disposeBoundsTree = disposeBoundsTree;
-      mergedGeometry.computeBoundsTree();
-      
-      colliderMesh = new THREE.Mesh(mergedGeometry);
-      bvhCollider = mergedGeometry.boundsTree;
-      console.log('[BVH] Collision tree successfully built.');
-    } catch(err) {
-      console.warn('[BVH] Collision tree notice:', err);
-    }
-
     hideLoadingScreen();
   },
   (xhr) => {
@@ -339,94 +375,65 @@ gltfLoader.load(
 );
 
 /* ============================================================
-   COLLISION & MOVEMENT UPDATE LOOP
+   PHYSICS & MOVEMENT LOOP
    ============================================================ */
-function updatePlayer(delta) {
-  const moveSpeed = keys.sprint ? 5.5 : 3.2;
+const moveDir = new THREE.Vector3();
+const forwardVec = new THREE.Vector3();
+const sideVec = new THREE.Vector3();
+
+function updatePlayerPhysics(delta) {
+  const speed = keys.sprint ? 5.5 : 3.0;
 
   // Damping
-  const damping = Math.exp(-7 * delta) - 1;
-  playerVelocity.addScaledVector(playerVelocity, damping);
+  const damping = Math.exp(-8 * delta) - 1;
+  player.velocity.x += player.velocity.x * damping;
+  player.velocity.z += player.velocity.z * damping;
 
-  // Gravity
-  if (!playerOnFloor) {
-    playerVelocity.y -= GRAVITY * delta;
+  // Calculate Forward / Side vectors from camera yaw (horizontal only)
+  forwardVec.set(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
+  sideVec.set(Math.cos(player.yaw), 0, -Math.sin(player.yaw));
+
+  moveDir.set(0, 0, 0);
+  if (keys.forward) moveDir.add(forwardVec);
+  if (keys.backward) moveDir.sub(forwardVec);
+  if (keys.right) moveDir.add(sideVec);
+  if (keys.left) moveDir.sub(sideVec);
+
+  if (moveDir.lengthSq() > 0.001) {
+    moveDir.normalize();
+    player.velocity.x += moveDir.x * speed * delta * 30;
+    player.velocity.z += moveDir.z * speed * delta * 30;
   }
 
-  // Direction vector from camera view
-  playerDirection.set(0, 0, 0);
-  const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-  forward.y = 0;
-  forward.normalize();
-
-  const side = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
-  side.y = 0;
-  side.normalize();
-
-  if (keys.forward) playerDirection.add(forward);
-  if (keys.backward) playerDirection.sub(forward);
-  if (keys.right) playerDirection.add(side);
-  if (keys.left) playerDirection.sub(side);
-
-  if (playerDirection.lengthSq() > 0.001) {
-    playerDirection.normalize();
-    playerVelocity.addScaledVector(playerDirection, moveSpeed * delta * 25);
+  // Gravity & Jump
+  if (!player.onGround) {
+    player.velocity.y -= 25 * delta;
+  } else if (keys.jump) {
+    player.velocity.y = 7.0;
+    player.onGround = false;
   }
 
-  if (playerOnFloor && keys.jump) {
-    playerVelocity.y = 7.5;
-    playerOnFloor = false;
+  // Integrate position
+  player.pos.x += player.velocity.x * delta;
+  player.pos.y += player.velocity.y * delta;
+  player.pos.z += player.velocity.z * delta;
+
+  // Ground level collision (Eye height 1.6m on floor level 0.0)
+  if (player.pos.y <= 1.6) {
+    player.pos.y = 1.6;
+    player.velocity.y = 0;
+    player.onGround = true;
   }
 
-  const deltaVector = playerVelocity.clone().multiplyScalar(delta);
-  playerCapsule.translate(deltaVector);
-
-  // BVH Collision Resolution against stand
-  playerOnFloor = false;
-  if (colliderMesh && bvhCollider) {
-    const tempBox = new THREE.Box3();
-
-    bvhCollider.shapecast({
-      intersectsBounds: box => box.intersectsBox(tempBox.setFromCenterAndSize(
-        playerCapsule.getCenter(new THREE.Vector3()),
-        new THREE.Vector3(playerCapsule.radius * 2, playerCapsule.radius * 2 + 1.0, playerCapsule.radius * 2)
-      )),
-      intersectsTriangle: tri => {
-        const triPoint = new THREE.Vector3();
-        const capsulePoint = new THREE.Vector3();
-
-        const distanceSq = tri.closestPointToSegment(playerCapsule, capsulePoint, triPoint);
-        const radius = playerCapsule.radius;
-
-        if (distanceSq < radius * radius) {
-          const depth = radius - Math.sqrt(distanceSq);
-          const normal = capsulePoint.clone().sub(triPoint).normalize();
-
-          if (normal.y > 0.55) {
-            playerOnFloor = true;
-          }
-
-          playerCapsule.translate(normal.multiplyScalar(depth));
-        }
-      }
-    });
-  }
-
-  // Ground level
-  if (playerCapsule.start.y < 0.35) {
-    playerCapsule.start.y = 0.35;
-    playerCapsule.end.y = 1.35;
-    playerVelocity.y = 0;
-    playerOnFloor = true;
-  }
+  // Resolve collisions against stand podiums & wall
+  resolveCollisions(player.pos, player.radius);
 
   // Pavilion boundaries
-  playerCapsule.start.x = THREE.MathUtils.clamp(playerCapsule.start.x, -25, 25);
-  playerCapsule.end.x = THREE.MathUtils.clamp(playerCapsule.end.x, -25, 25);
-  playerCapsule.start.z = THREE.MathUtils.clamp(playerCapsule.start.z, -15, 25);
-  playerCapsule.end.z = THREE.MathUtils.clamp(playerCapsule.end.z, -15, 25);
+  player.pos.x = THREE.MathUtils.clamp(player.pos.x, -30, 30);
+  player.pos.z = THREE.MathUtils.clamp(player.pos.z, -15, 30);
 
-  camera.position.copy(playerCapsule.end).add(new THREE.Vector3(0, 0.25, 0));
+  // Apply to camera
+  updateCamera();
 }
 
 /* ============================================================
@@ -449,8 +456,9 @@ function animate() {
     lastFpsTime = now;
   }
 
-  updatePlayer(delta);
+  updatePlayerPhysics(delta);
 
+  // Subtle spotlight animation
   const time = clock.getElapsedTime();
   spotLeft.position.y = 3.5 + Math.sin(time * 0.8) * 0.05;
   spotRight.position.y = 3.5 + Math.cos(time * 0.8) * 0.05;
