@@ -1,4 +1,4 @@
-﻿import * as THREE from 'three';
+import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 /* ============================================================
@@ -306,6 +306,7 @@ function hideLoadingBar() {
    ============================================================ */
 const gltfLoader = new GLTFLoader();
 const candidateUrls = [
+  new URL('./booth.glb', import.meta.url).href,
   './booth.glb',
   'booth.glb',
   '/scenengine/booth.glb'
