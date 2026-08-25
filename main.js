@@ -1,6 +1,5 @@
 ﻿import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { computeBoundsTree, disposeBoundsTree, acceleratedRaycast, MeshBVH, StaticGeometryGenerator } from 'three-mesh-bvh';
 import { Capsule } from 'three/examples/jsm/math/Capsule.js';
@@ -79,12 +78,12 @@ const sfx = new SoundFX();
    ============================================================ */
 const container = document.getElementById('canvas-container');
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0c121e);
-scene.fog = new THREE.FogExp2(0x0c121e, 0.025);
+scene.background = new THREE.Color(0x0e1422);
+scene.fog = new THREE.FogExp2(0x0e1422, 0.02);
 
 const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.05, 100);
-camera.position.set(0, 1.6, 5.0);
-camera.lookAt(0, 1.0, 0.5);
+camera.position.set(0, 1.7, 5.2);
+camera.lookAt(0, 1.1, -0.2);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -92,38 +91,38 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.35;
+renderer.toneMappingExposure = 1.4;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 container.appendChild(renderer.domElement);
 
 /* ============================================================
    EXHIBITION HALL ENVIRONMENT & LIGHTING
    ============================================================ */
-const ambientLight = new THREE.AmbientLight(0xddeeff, 1.1);
+const ambientLight = new THREE.AmbientLight(0xffffff, 1.4);
 scene.add(ambientLight);
 
-const keyLight = new THREE.DirectionalLight(0xffffff, 2.5);
-keyLight.position.set(5, 10, 7);
+const keyLight = new THREE.DirectionalLight(0xffffff, 2.8);
+keyLight.position.set(5, 10, 8);
 keyLight.castShadow = true;
 keyLight.shadow.mapSize.width = 2048;
 keyLight.shadow.mapSize.height = 2048;
 keyLight.shadow.camera.near = 0.5;
-keyLight.shadow.camera.far = 25;
-keyLight.shadow.camera.left = -7;
-keyLight.shadow.camera.right = 7;
-keyLight.shadow.camera.top = 7;
-keyLight.shadow.camera.bottom = -5;
+keyLight.shadow.camera.far = 30;
+keyLight.shadow.camera.left = -8;
+keyLight.shadow.camera.right = 8;
+keyLight.shadow.camera.top = 8;
+keyLight.shadow.camera.bottom = -6;
 keyLight.shadow.bias = -0.0001;
 keyLight.shadow.normalBias = 0.02;
 scene.add(keyLight);
 
-const fillLight = new THREE.DirectionalLight(0x4488ff, 1.5);
-fillLight.position.set(-6, 7, -3);
+const fillLight = new THREE.DirectionalLight(0x66aaff, 1.8);
+fillLight.position.set(-6, 8, -4);
 scene.add(fillLight);
 
 // Truss Spotlights
-function createSpotlight(x, y, z, targetX, targetY, targetZ, color = 0xffffff, intensity = 6.0) {
-  const spot = new THREE.SpotLight(color, intensity, 12, Math.PI / 3.5, 0.35, 1.2);
+function createSpotlight(x, y, z, targetX, targetY, targetZ, color = 0xffffff, intensity = 8.0) {
+  const spot = new THREE.SpotLight(color, intensity, 15, Math.PI / 3, 0.35, 1.2);
   spot.position.set(x, y, z);
   spot.target.position.set(targetX, targetY, targetZ);
   scene.add(spot);
@@ -131,23 +130,23 @@ function createSpotlight(x, y, z, targetX, targetY, targetZ, color = 0xffffff, i
   return spot;
 }
 
-const spotLeft = createSpotlight(-1.0, 3.5, 1.0, -1.0, 0.85, 0.3, 0xffffff, 7.0);
-const spotRight = createSpotlight(1.55, 3.5, 1.0, 1.55, 0.85, 0.3, 0xffffff, 7.0);
-const spotLogo = createSpotlight(-1.5, 3.0, 0.5, -1.55, 1.8, 0.74, 0x00d2ff, 5.0);
+const spotLeft = createSpotlight(-1.0, 3.5, 0.5, -1.0, 0.85, -0.29, 0xffffff, 8.0);
+const spotRight = createSpotlight(1.55, 3.5, 0.5, 1.55, 0.85, -0.29, 0xffffff, 8.0);
+const spotLogo = createSpotlight(-1.5, 3.0, 0.5, -1.55, 1.8, -0.74, 0x00d2ff, 6.0);
 
-// Point lights for specular highlights
-const pointLeft = new THREE.PointLight(0x00d2ff, 1.5, 4);
-pointLeft.position.set(-1.0, 1.2, 0.8);
+// Point lights
+const pointLeft = new THREE.PointLight(0x00d2ff, 2.0, 5);
+pointLeft.position.set(-1.0, 1.2, 0.5);
 scene.add(pointLeft);
 
-const pointRight = new THREE.PointLight(0x00d2ff, 1.5, 4);
-pointRight.position.set(1.55, 1.2, 0.8);
+const pointRight = new THREE.PointLight(0x00d2ff, 2.0, 5);
+pointRight.position.set(1.55, 1.2, 0.5);
 scene.add(pointRight);
 
 // Exhibition Hall Floor
 const hallFloorGeo = new THREE.PlaneGeometry(80, 80, 80, 80);
 const hallFloorMat = new THREE.MeshStandardMaterial({
-  color: 0x0e1422,
+  color: 0x111728,
   roughness: 0.2,
   metalness: 0.6,
 });
@@ -157,15 +156,16 @@ hallFloor.position.y = -0.001;
 hallFloor.receiveShadow = true;
 scene.add(hallFloor);
 
-const gridHelper = new THREE.GridHelper(80, 80, 0x00d2ff, 0x1a2638);
+const gridHelper = new THREE.GridHelper(80, 80, 0x00d2ff, 0x1f2b42);
 gridHelper.position.y = 0.001;
 scene.add(gridHelper);
 
 /* ============================================================
-   CONTROLS SETUP: POINTER LOCK & ORBIT CONTROLS
+   CONTROLS SETUP: FREE CURSOR MOUSE-LOOK & ORBIT CONTROLS
    ============================================================ */
-let cameraMode = 'fps';
-const fpsControls = new PointerLockControls(camera, document.body);
+let cameraMode = 'fps'; // 'fps' or 'orbit'
+
+// Orbit controls for inspection mode
 const orbitControls = new OrbitControls(camera, renderer.domElement);
 orbitControls.enableDamping = true;
 orbitControls.dampingFactor = 0.05;
@@ -174,13 +174,79 @@ orbitControls.minDistance = 0.5;
 orbitControls.maxDistance = 25;
 orbitControls.enabled = false;
 
+// First-person mouse look with free cursor (drag to rotate)
+let isDraggingMouse = false;
+let mouseStartX = 0;
+let mouseStartY = 0;
+let cameraPitch = -0.08;
+let cameraYaw = 0;
+
+renderer.domElement.addEventListener('mousedown', (e) => {
+  if (cameraMode === 'fps') {
+    isDraggingMouse = true;
+    mouseStartX = e.clientX;
+    mouseStartY = e.clientY;
+  }
+});
+
+window.addEventListener('mouseup', () => {
+  isDraggingMouse = false;
+});
+
+window.addEventListener('mousemove', (e) => {
+  if (cameraMode === 'fps' && isDraggingMouse) {
+    const deltaX = e.clientX - mouseStartX;
+    const deltaY = e.clientY - mouseStartY;
+    mouseStartX = e.clientX;
+    mouseStartY = e.clientY;
+
+    cameraYaw -= deltaX * 0.0035;
+    cameraPitch -= deltaY * 0.0035;
+    cameraPitch = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, cameraPitch));
+
+    const euler = new THREE.Euler(cameraPitch, cameraYaw, 0, 'YXZ');
+    camera.quaternion.setFromEuler(euler);
+  }
+});
+
+// Touch controls for mobile
+let touchStartX = 0;
+let touchStartY = 0;
+renderer.domElement.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 1 && cameraMode === 'fps') {
+    isDraggingMouse = true;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }
+}, { passive: true });
+
+renderer.domElement.addEventListener('touchmove', (e) => {
+  if (isDraggingMouse && e.touches.length === 1 && cameraMode === 'fps') {
+    const deltaX = e.touches[0].clientX - touchStartX;
+    const deltaY = e.touches[0].clientY - touchStartY;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+
+    cameraYaw -= deltaX * 0.004;
+    cameraPitch -= deltaY * 0.004;
+    cameraPitch = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, cameraPitch));
+
+    const euler = new THREE.Euler(cameraPitch, cameraYaw, 0, 'YXZ');
+    camera.quaternion.setFromEuler(euler);
+  }
+}, { passive: true });
+
+window.addEventListener('touchend', () => {
+  isDraggingMouse = false;
+});
+
 /* ============================================================
    COLLISION PHYSICS ENGINE (three-mesh-bvh + Capsule)
    ============================================================ */
 const GRAVITY = 25;
 const playerCapsule = new Capsule(
-  new THREE.Vector3(0, 0.35, 5.0),
-  new THREE.Vector3(0, 1.35, 5.0),
+  new THREE.Vector3(0, 0.35, 5.2),
+  new THREE.Vector3(0, 1.35, 5.2),
   0.35
 );
 
@@ -190,7 +256,6 @@ let playerOnFloor = false;
 let colliderMesh = null;
 let bvhCollider = null;
 
-// Universal key map supporting English & Russian layout
 const keys = {
   forward: false,
   backward: false,
@@ -234,39 +299,6 @@ function handleKeyUp(e) {
 window.addEventListener('keydown', handleKeyDown);
 window.addEventListener('keyup', handleKeyUp);
 
-// Mouse drag look when pointer lock is not active
-let isMouseDown = false;
-let prevMouseX = 0;
-let prevMouseY = 0;
-
-renderer.domElement.addEventListener('mousedown', (e) => {
-  if (cameraMode === 'fps' && !fpsControls.isLocked) {
-    isMouseDown = true;
-    prevMouseX = e.clientX;
-    prevMouseY = e.clientY;
-  }
-});
-
-window.addEventListener('mouseup', () => {
-  isMouseDown = false;
-});
-
-window.addEventListener('mousemove', (e) => {
-  if (cameraMode === 'fps' && isMouseDown && !fpsControls.isLocked) {
-    const deltaX = e.clientX - prevMouseX;
-    const deltaY = e.clientY - prevMouseY;
-    prevMouseX = e.clientX;
-    prevMouseY = e.clientY;
-
-    const euler = new THREE.Euler(0, 0, 0, 'YXZ');
-    euler.setFromQuaternion(camera.quaternion);
-    euler.y -= deltaX * 0.003;
-    euler.x -= deltaY * 0.003;
-    euler.x = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, euler.x));
-    camera.quaternion.setFromEuler(euler);
-  }
-});
-
 /* ============================================================
    HOTSPOTS DATA & INTERACTIVE EXHIBIT SYSTEM
    ============================================================ */
@@ -276,9 +308,9 @@ const HOTSPOTS_DATA = [
     title: 'Взрыв-схема электродвигателя',
     category: 'КОНСТРУКЦИЯ И КОМПОНЕНТЫ',
     subtitle: 'Синхронная машина с постоянными магнитами (PMSM)',
-    worldPos: new THREE.Vector3(-1.0, 0.85, 0.29),
-    cameraPos: new THREE.Vector3(-1.0, 1.3, 1.8),
-    lookTarget: new THREE.Vector3(-1.0, 0.85, 0.29),
+    worldPos: new THREE.Vector3(-1.0, 0.85, -0.29),
+    cameraPos: new THREE.Vector3(-1.0, 1.4, 1.4),
+    lookTarget: new THREE.Vector3(-1.0, 0.85, -0.29),
     metrics: [
       { val: '150 кВт', lbl: 'Пиковая мощность' },
       { val: '320 Н·м', lbl: 'Макс. момент' },
@@ -296,9 +328,9 @@ const HOTSPOTS_DATA = [
     title: 'Собранный тяговый электропривод',
     category: 'ТЯГОВЫЙ СИЛОВОЙ МОДУЛЬ',
     subtitle: 'Компактный агрегат 3-в-1 для легкового и коммерческого транспорта',
-    worldPos: new THREE.Vector3(1.55, 0.85, 0.29),
-    cameraPos: new THREE.Vector3(1.55, 1.3, 1.8),
-    lookTarget: new THREE.Vector3(1.55, 0.85, 0.29),
+    worldPos: new THREE.Vector3(1.55, 0.85, -0.29),
+    cameraPos: new THREE.Vector3(1.55, 1.4, 1.4),
+    lookTarget: new THREE.Vector3(1.55, 0.85, -0.29),
     metrics: [
       { val: '16 000', lbl: 'Об/мин макс.' },
       { val: '78 кг', lbl: 'Сухая масса' },
@@ -316,9 +348,9 @@ const HOTSPOTS_DATA = [
     title: 'Силовой инвертор на карбиде кремния (SiC)',
     category: 'СИЛОВАЯ ЭЛЕКТРОНИКА',
     subtitle: 'Блок управления тяговым приводом высокой частоты',
-    worldPos: new THREE.Vector3(-1.28, 1.45, 0.72),
-    cameraPos: new THREE.Vector3(-1.28, 1.6, 1.9),
-    lookTarget: new THREE.Vector3(-1.28, 1.45, 0.72),
+    worldPos: new THREE.Vector3(-1.28, 1.45, -0.72),
+    cameraPos: new THREE.Vector3(-1.28, 1.6, 0.8),
+    lookTarget: new THREE.Vector3(-1.28, 1.45, -0.72),
     metrics: [
       { val: '800 В', lbl: 'Напряжение сети' },
       { val: '450 А', lbl: 'Макс. ток' },
@@ -336,9 +368,9 @@ const HOTSPOTS_DATA = [
     title: 'Информационный комплекс стенда',
     category: 'ЭКОСИСТЕМА РОСАТОМ',
     subtitle: 'Стратегия развития электрического движения в РФ',
-    worldPos: new THREE.Vector3(0.85, 1.6, 0.72),
-    cameraPos: new THREE.Vector3(0.85, 1.6, 2.5),
-    lookTarget: new THREE.Vector3(0.85, 1.5, 0.72),
+    worldPos: new THREE.Vector3(0.85, 1.6, -0.72),
+    cameraPos: new THREE.Vector3(0.85, 1.6, 1.2),
+    lookTarget: new THREE.Vector3(0.85, 1.5, -0.72),
     metrics: [
       { val: 'Гигафабрика', lbl: 'Калининград' },
       { val: '4 ГВт·ч', lbl: 'Емкость/год' },
@@ -356,9 +388,9 @@ const HOTSPOTS_DATA = [
     title: 'Редукторная группа с дифференциалом',
     category: 'МЕХАНИЧЕСКАЯ ТРАНСМИССИЯ',
     subtitle: 'Интегрированный цилиндрический косозубый редуктор',
-    worldPos: new THREE.Vector3(-0.60, 0.85, 0.15),
-    cameraPos: new THREE.Vector3(-0.60, 1.3, 1.5),
-    lookTarget: new THREE.Vector3(-0.60, 0.85, 0.15),
+    worldPos: new THREE.Vector3(-0.60, 0.85, -0.15),
+    cameraPos: new THREE.Vector3(-0.60, 1.3, 1.2),
+    lookTarget: new THREE.Vector3(-0.60, 0.85, -0.15),
     metrics: [
       { val: '9.2:1', lbl: 'Передаточное число' },
       { val: '2800 Н·м', lbl: 'Момент на колесах' },
@@ -424,29 +456,7 @@ let currentFocusedExhibit = null;
 startBtn.addEventListener('click', () => {
   sfx.init();
   sfx.playWhoosh();
-  if (cameraMode === 'fps') {
-    fpsControls.lock();
-  }
   blocker.classList.add('hidden');
-});
-
-fpsControls.addEventListener('lock', () => {
-  blocker.classList.add('hidden');
-  reticle.classList.remove('hidden');
-  detailDrawer.classList.add('hidden');
-});
-
-fpsControls.addEventListener('unlock', () => {
-  if (cameraMode === 'fps' && detailDrawer.classList.contains('hidden')) {
-    // Keep HUD usable
-  }
-});
-
-// Click on canvas to lock pointer
-renderer.domElement.addEventListener('click', () => {
-  if (cameraMode === 'fps' && !fpsControls.isLocked && detailDrawer.classList.contains('hidden')) {
-    fpsControls.lock();
-  }
 });
 
 closeDrawerBtn.addEventListener('click', () => {
@@ -480,9 +490,6 @@ function openExhibitDrawer(data) {
   
   drawerFeatures.innerHTML = data.features.map(f => `<li>${f}</li>`).join('');
   detailDrawer.classList.remove('hidden');
-  if (fpsControls.isLocked) {
-    fpsControls.unlock();
-  }
 }
 
 function handleInteractKey() {
@@ -494,11 +501,11 @@ function handleInteractKey() {
 // Teleport Chips Navigation
 const navChips = document.querySelectorAll('.nav-chip');
 const TELEPORT_POINTS = {
-  overview: { pos: new THREE.Vector3(0, 1.6, 5.0), look: new THREE.Vector3(0, 1.0, 0.5) },
-  exploded: { pos: new THREE.Vector3(-1.0, 1.4, 2.0), look: new THREE.Vector3(-1.0, 0.85, 0.3) },
-  assembled: { pos: new THREE.Vector3(1.55, 1.4, 2.0), look: new THREE.Vector3(1.55, 0.85, 0.3) },
-  inverter: { pos: new THREE.Vector3(-1.28, 1.6, 2.1), look: new THREE.Vector3(-1.28, 1.45, 0.72) },
-  infoboard: { pos: new THREE.Vector3(0.85, 1.6, 2.5), look: new THREE.Vector3(0.85, 1.5, 0.72) }
+  overview: { pos: new THREE.Vector3(0, 1.7, 5.2), look: new THREE.Vector3(0, 1.1, -0.2) },
+  exploded: { pos: new THREE.Vector3(-1.0, 1.4, 1.4), look: new THREE.Vector3(-1.0, 0.85, -0.29) },
+  assembled: { pos: new THREE.Vector3(1.55, 1.4, 1.4), look: new THREE.Vector3(1.55, 0.85, -0.29) },
+  inverter: { pos: new THREE.Vector3(-1.28, 1.6, 0.8), look: new THREE.Vector3(-1.28, 1.45, -0.72) },
+  infoboard: { pos: new THREE.Vector3(0.85, 1.6, 1.2), look: new THREE.Vector3(0.85, 1.5, -0.72) }
 };
 
 navChips.forEach(chip => {
@@ -544,17 +551,14 @@ function toggleCameraMode() {
   if (cameraMode === 'fps') {
     cameraMode = 'orbit';
     cameraModeBtn.innerHTML = '<span class="btn-emoji">🪐</span> <span class="btn-label">Орбита</span>';
-    if (fpsControls.isLocked) fpsControls.unlock();
-    fpsControls.enabled = false;
     orbitControls.enabled = true;
-    orbitControls.target.set(0, 1.0, 0.3);
+    orbitControls.target.set(0, 1.0, -0.2);
     reticle.classList.add('hidden');
     blocker.classList.add('hidden');
   } else {
     cameraMode = 'fps';
     cameraModeBtn.innerHTML = '<span class="btn-emoji">🚶</span> <span class="btn-label">1-е лицо</span>';
     orbitControls.enabled = false;
-    fpsControls.enabled = true;
     reticle.classList.remove('hidden');
   }
 }
@@ -565,23 +569,23 @@ lightingModeBtn.addEventListener('click', () => {
   isShowcaseNight = !isShowcaseNight;
   sfx.playChirp();
   if (isShowcaseNight) {
-    scene.background.set(0x04060c);
-    scene.fog.color.set(0x04060c);
-    ambientLight.intensity = 0.35;
-    keyLight.intensity = 1.0;
-    fillLight.intensity = 0.5;
-    spotLeft.intensity = 10.0;
-    spotRight.intensity = 10.0;
+    scene.background.set(0x060810);
+    scene.fog.color.set(0x060810);
+    ambientLight.intensity = 0.5;
+    keyLight.intensity = 1.2;
+    fillLight.intensity = 0.7;
+    spotLeft.intensity = 12.0;
+    spotRight.intensity = 12.0;
     spotLogo.intensity = 8.0;
   } else {
-    scene.background.set(0x0c121e);
-    scene.fog.color.set(0x0c121e);
-    ambientLight.intensity = 1.1;
-    keyLight.intensity = 2.5;
-    fillLight.intensity = 1.5;
-    spotLeft.intensity = 7.0;
-    spotRight.intensity = 7.0;
-    spotLogo.intensity = 5.0;
+    scene.background.set(0x0e1422);
+    scene.fog.color.set(0x0e1422);
+    ambientLight.intensity = 1.4;
+    keyLight.intensity = 2.8;
+    fillLight.intensity = 1.8;
+    spotLeft.intensity = 8.0;
+    spotRight.intensity = 8.0;
+    spotLogo.intensity = 6.0;
   }
 });
 
@@ -608,11 +612,11 @@ function hideLoadingScreen() {
     loadingScreen.style.opacity = '0';
     setTimeout(() => {
       loadingScreen.classList.add('hidden');
-    }, 500);
+      blocker.classList.add('hidden'); // Automatically reveal the interactive scene!
+    }, 400);
   }, 200);
 }
 
-// Model URL
 const modelPath = './booth.glb';
 console.log(`[GLTF] Loading exhibition model from: ${modelPath}`);
 loadingStatus.textContent = 'Загрузка 3D-модели стенда...';
@@ -630,7 +634,8 @@ gltfLoader.load(
         child.receiveShadow = true;
 
         if (child.material) {
-          child.material.roughness = Math.max(0.2, child.material.roughness || 0.4);
+          child.material.side = THREE.DoubleSide; // Render both sides of geometry
+          child.material.roughness = Math.max(0.15, child.material.roughness || 0.35);
           const matName = (child.material.name || '').toLowerCase();
           const objName = (child.name || '').toLowerCase();
           if (
@@ -673,7 +678,6 @@ gltfLoader.load(
   },
   (error) => {
     console.error('[GLTF] Error loading model from primary path:', error);
-    // Fallback load
     gltfLoader.load('/scenengine/booth.glb', (gltf2) => {
       scene.add(gltf2.scene);
       hideLoadingScreen();
@@ -689,18 +693,15 @@ gltfLoader.load(
 function updatePlayer(delta) {
   if (cameraMode !== 'fps' || isTeleporting) return;
 
-  const moveSpeed = keys.sprint ? 5.5 : 3.0;
+  const moveSpeed = keys.sprint ? 5.5 : 3.2;
 
-  // Damping
   const damping = Math.exp(-6 * delta) - 1;
   playerVelocity.addScaledVector(playerVelocity, damping);
 
-  // Gravity
   if (!playerOnFloor) {
     playerVelocity.y -= GRAVITY * delta;
   }
 
-  // Direction vector from camera view
   playerDirection.set(0, 0, 0);
   const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
   forward.y = 0;
@@ -732,7 +733,6 @@ function updatePlayer(delta) {
   const deltaVector = playerVelocity.clone().multiplyScalar(delta);
   playerCapsule.translate(deltaVector);
 
-  // BVH Collision Resolution
   playerOnFloor = false;
   if (colliderMesh && bvhCollider) {
     const tempBox = new THREE.Box3();
@@ -763,7 +763,7 @@ function updatePlayer(delta) {
     });
   }
 
-  // Ground plane limit
+  // Ground level
   if (playerCapsule.start.y < 0.35) {
     playerCapsule.start.y = 0.35;
     playerCapsule.end.y = 1.35;
@@ -777,7 +777,7 @@ function updatePlayer(delta) {
   playerCapsule.start.z = THREE.MathUtils.clamp(playerCapsule.start.z, -15, 25);
   playerCapsule.end.z = THREE.MathUtils.clamp(playerCapsule.end.z, -15, 25);
 
-  camera.position.copy(playerCapsule.end).add(new THREE.Vector3(0, 0.25, 0));
+  camera.position.copy(playerCapsule.end).add(new THREE.Vector3(0, 0.35, 0));
 }
 
 /* ============================================================

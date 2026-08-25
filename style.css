@@ -39,7 +39,7 @@ html, body {
   z-index: 1;
 }
 
-canvas {
+canvas { cursor: grab;
   display: block;
   width: 100% !important;
   height: 100% !important;
@@ -226,7 +226,7 @@ canvas {
   align-items: center;
   justify-content: center;
   z-index: 50;
-  cursor: pointer;
+  cursor: default;
   transition: opacity 0.3s ease;
 }
 
@@ -357,7 +357,7 @@ canvas {
   font-weight: 700;
   letter-spacing: 0.05em;
   color: #ffffff;
-  cursor: pointer;
+  cursor: default;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -460,7 +460,7 @@ kbd {
   font-weight: 600;
   padding: 6px 12px;
   border-radius: 10px;
-  cursor: pointer;
+  cursor: default;
   transition: all 0.2s ease;
 }
 
@@ -494,7 +494,7 @@ kbd {
   font-weight: 600;
   padding: 8px 14px;
   border-radius: 12px;
-  cursor: pointer;
+  cursor: default;
   backdrop-filter: blur(12px);
   transition: all 0.2s ease;
 }
@@ -600,7 +600,7 @@ kbd {
   color: #fff;
   font-size: 20px;
   line-height: 1;
-  cursor: pointer;
+  cursor: default;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -723,7 +723,7 @@ kbd {
   font-family: var(--font-main);
   font-size: 12px;
   font-weight: 700;
-  cursor: pointer;
+  cursor: default;
   transition: all 0.2s ease;
 }
 
@@ -741,7 +741,7 @@ kbd {
   left: 0;
   z-index: 15;
   pointer-events: auto;
-  cursor: pointer;
+  cursor: default;
   transform: translate(-50%, -50%);
   display: flex;
   align-items: center;
