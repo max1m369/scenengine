@@ -88,12 +88,12 @@ gridHelper.position.y = 0.001;
 scene.add(gridHelper);
 
 /* ============================================================
-   ROCK-SOLID FIRST-PERSON CONTROLLER & PHYSICS
+   FIRST-PERSON CONTROLLER & MOVEMENT
    ============================================================ */
 const player = {
-  pos: new THREE.Vector3(0, 1.6, 4.8), // Start at X=0, Y=1.6 (Eye level), Z=4.8 (In front of booth)
+  pos: new THREE.Vector3(0, 1.6, 4.8),
   velocity: new THREE.Vector3(0, 0, 0),
-  pitch: -0.04, // slight downward gaze
+  pitch: -0.04,
   yaw: 0.0,
   radius: 0.35,
   height: 1.6,
@@ -101,7 +101,6 @@ const player = {
 };
 
 function updateCamera() {
-  // Ensure no NaNs
   if (isNaN(player.pos.x) || isNaN(player.pos.y) || isNaN(player.pos.z)) {
     player.pos.set(0, 1.6, 4.8);
   }
@@ -129,9 +128,8 @@ let isDragging = false;
 let mouseStartX = 0;
 let mouseStartY = 0;
 
-// Drag to look
 renderer.domElement.addEventListener('mousedown', (e) => {
-  if (e.button === 0) { // Left click
+  if (e.button === 0) {
     isDragging = true;
     mouseStartX = e.clientX;
     mouseStartY = e.clientY;
@@ -161,7 +159,6 @@ window.addEventListener('mousemove', (e) => {
   }
 });
 
-// Double click to request pointer lock (optional FPS mode)
 renderer.domElement.addEventListener('dblclick', () => {
   renderer.domElement.requestPointerLock().catch(() => {});
 });
@@ -199,7 +196,7 @@ window.addEventListener('touchend', () => {
   isDragging = false;
 });
 
-// Keyboard Input (English + Russian + Arrow keys)
+// Keyboard Input (WASD / ЦФЫВ / Arrows)
 const keys = {
   forward: false,
   backward: false,
@@ -240,28 +237,21 @@ window.addEventListener('keyup', (e) => {
 /* ============================================================
    COLLISION BOXES (PODIUMS & BACKDROP WALL)
    ============================================================ */
-// Stand collision obstacles (AABB with radius padding)
 const obstacles = [
-  // Left Podium (Exploded motor)
   { minX: -2.15, maxX: 0.15, minZ: -0.80, maxZ: 0.35, minY: 0, maxY: 1.0 },
-  // Right Podium (Assembled motor)
   { minX: 0.95, maxX: 2.15, minZ: -0.80, maxZ: 0.35, minY: 0, maxY: 1.0 },
-  // Backdrop Wall
   { minX: -2.80, maxX: 2.80, minZ: -1.20, maxZ: -0.65, minY: 0, maxY: 3.0 }
 ];
 
 function resolveCollisions(pos, radius) {
   for (const obs of obstacles) {
-    // Check Y overlap
     if (pos.y - player.height + 0.2 < obs.maxY && pos.y > obs.minY) {
-      // Expanded bounding box by player radius
       const expandedMinX = obs.minX - radius;
       const expandedMaxX = obs.maxX + radius;
       const expandedMinZ = obs.minZ - radius;
       const expandedMaxZ = obs.maxZ + radius;
 
       if (pos.x > expandedMinX && pos.x < expandedMaxX && pos.z > expandedMinZ && pos.z < expandedMaxZ) {
-        // Calculate penetration depths along each side
         const dLeft = pos.x - expandedMinX;
         const dRight = expandedMaxX - pos.x;
         const dBack = pos.z - expandedMinZ;
@@ -279,11 +269,10 @@ function resolveCollisions(pos, radius) {
 }
 
 /* ============================================================
-   UI BUTTONS
+   UI BUTTONS & TOP PROGRESS BAR
    ============================================================ */
-const loadingScreen = document.getElementById('loading-screen');
+const topLoadingBar = document.getElementById('top-loading-bar');
 const progressBar = document.getElementById('progress-bar');
-const loadingPercent = document.getElementById('loading-percent');
 const loadingStatus = document.getElementById('loading-status');
 const fpsCounter = document.getElementById('fps-counter');
 const resetCamBtn = document.getElementById('reset-cam-btn');
@@ -303,76 +292,85 @@ if (fullscreenBtn) {
   });
 }
 
-function hideLoadingScreen() {
-  progressBar.style.width = '100%';
-  loadingPercent.textContent = '100%';
-  loadingStatus.textContent = 'Готово!';
+function hideLoadingBar() {
+  if (progressBar) progressBar.style.width = '100%';
+  if (loadingStatus) loadingStatus.textContent = '⚡ Стенд загружен!';
 
   setTimeout(() => {
-    loadingScreen.style.opacity = '0';
-    setTimeout(() => {
-      loadingScreen.classList.add('hidden');
-    }, 400);
-  }, 200);
+    if (topLoadingBar) topLoadingBar.classList.add('hidden');
+  }, 600);
 }
 
 /* ============================================================
    LOAD 3D GLTF MODEL
    ============================================================ */
 const gltfLoader = new GLTFLoader();
-const modelPath = './booth.glb';
-console.log(`[GLTF] Loading exhibition stand from: ${modelPath}`);
+const candidateUrls = [
+  './booth.glb',
+  'booth.glb',
+  '/scenengine/booth.glb'
+];
 
-gltfLoader.load(
-  modelPath,
-  (gltf) => {
-    console.log('[GLTF] Model successfully loaded!');
-    const model = gltf.scene;
-    scene.add(model);
+let urlIndex = 0;
 
-    model.traverse((child) => {
-      if (child.isMesh) {
-        child.castShadow = true;
-        child.receiveShadow = true;
+function tryLoad() {
+  if (urlIndex >= candidateUrls.length) {
+    console.warn('[GLTF] All URLs exhausted.');
+    hideLoadingBar();
+    return;
+  }
 
-        if (child.material) {
-          child.material.side = THREE.DoubleSide;
-          child.material.roughness = Math.max(0.15, child.material.roughness || 0.35);
-          const matName = (child.material.name || '').toLowerCase();
-          const objName = (child.name || '').toLowerCase();
-          if (
-            matName.includes('led') || 
-            matName.includes('underglow') || 
-            objName.includes('led') || 
-            objName.includes('glow') ||
-            matName.includes('graphic') ||
-            objName.includes('graphic')
-          ) {
-            child.material.emissiveIntensity = 2.5;
+  const currentUrl = candidateUrls[urlIndex];
+  console.log(`[GLTF] Loading model from: ${currentUrl}`);
+
+  gltfLoader.load(
+    currentUrl,
+    (gltf) => {
+      console.log('[GLTF] Model successfully loaded!');
+      const model = gltf.scene;
+      scene.add(model);
+
+      model.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+
+          if (child.material) {
+            child.material.side = THREE.DoubleSide;
+            child.material.roughness = Math.max(0.15, child.material.roughness || 0.35);
+            const matName = (child.material.name || '').toLowerCase();
+            const objName = (child.name || '').toLowerCase();
+            if (
+              matName.includes('led') || 
+              matName.includes('underglow') || 
+              objName.includes('led') || 
+              objName.includes('glow') ||
+              matName.includes('graphic') ||
+              objName.includes('graphic')
+            ) {
+              child.material.emissiveIntensity = 2.5;
+            }
           }
         }
-      }
-    });
+      });
 
-    hideLoadingScreen();
-  },
-  (xhr) => {
-    if (xhr.lengthComputable && xhr.total > 0) {
-      const percent = Math.min(99, Math.round((xhr.loaded / xhr.total) * 100));
-      progressBar.style.width = percent + '%';
-      loadingPercent.textContent = percent + '%';
+      hideLoadingBar();
+    },
+    (xhr) => {
+      if (xhr.lengthComputable && xhr.total > 0) {
+        const percent = Math.min(99, Math.round((xhr.loaded / xhr.total) * 100));
+        if (progressBar) progressBar.style.width = percent + '%';
+      }
+    },
+    (error) => {
+      console.warn(`[GLTF] Failed loading from ${currentUrl}:`, error);
+      urlIndex++;
+      tryLoad();
     }
-  },
-  (error) => {
-    console.error('[GLTF] Error loading model from primary path:', error);
-    gltfLoader.load('/scenengine/booth.glb', (gltf2) => {
-      scene.add(gltf2.scene);
-      hideLoadingScreen();
-    }, null, () => {
-      hideLoadingScreen();
-    });
-  }
-);
+  );
+}
+
+tryLoad();
 
 /* ============================================================
    PHYSICS & MOVEMENT LOOP
@@ -384,12 +382,10 @@ const sideVec = new THREE.Vector3();
 function updatePlayerPhysics(delta) {
   const speed = keys.sprint ? 5.5 : 3.0;
 
-  // Damping
   const damping = Math.exp(-8 * delta) - 1;
   player.velocity.x += player.velocity.x * damping;
   player.velocity.z += player.velocity.z * damping;
 
-  // Calculate Forward / Side vectors from camera yaw (horizontal only)
   forwardVec.set(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
   sideVec.set(Math.cos(player.yaw), 0, -Math.sin(player.yaw));
 
@@ -405,7 +401,6 @@ function updatePlayerPhysics(delta) {
     player.velocity.z += moveDir.z * speed * delta * 30;
   }
 
-  // Gravity & Jump
   if (!player.onGround) {
     player.velocity.y -= 25 * delta;
   } else if (keys.jump) {
@@ -413,26 +408,21 @@ function updatePlayerPhysics(delta) {
     player.onGround = false;
   }
 
-  // Integrate position
   player.pos.x += player.velocity.x * delta;
   player.pos.y += player.velocity.y * delta;
   player.pos.z += player.velocity.z * delta;
 
-  // Ground level collision (Eye height 1.6m on floor level 0.0)
   if (player.pos.y <= 1.6) {
     player.pos.y = 1.6;
     player.velocity.y = 0;
     player.onGround = true;
   }
 
-  // Resolve collisions against stand podiums & wall
   resolveCollisions(player.pos, player.radius);
 
-  // Pavilion boundaries
   player.pos.x = THREE.MathUtils.clamp(player.pos.x, -30, 30);
   player.pos.z = THREE.MathUtils.clamp(player.pos.z, -15, 30);
 
-  // Apply to camera
   updateCamera();
 }
 
@@ -458,7 +448,6 @@ function animate() {
 
   updatePlayerPhysics(delta);
 
-  // Subtle spotlight animation
   const time = clock.getElapsedTime();
   spotLeft.position.y = 3.5 + Math.sin(time * 0.8) * 0.05;
   spotRight.position.y = 3.5 + Math.cos(time * 0.8) * 0.05;
