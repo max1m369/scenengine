@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+﻿import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 /* ============================================================
@@ -6,11 +6,16 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
    ============================================================ */
 const container = document.getElementById('canvas-container');
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0a0f1d);
-scene.fog = new THREE.FogExp2(0x0a0f1d, 0.018);
 
-// Standard Human Eye Height = 1.6m
-const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.05, 100);
+// Studio neutral gray background matching the reference render
+const STUDIO_BG_COLOR = 0x80858e;
+const STUDIO_FLOOR_COLOR = 0x90959e;
+
+scene.background = new THREE.Color(STUDIO_BG_COLOR);
+scene.fog = new THREE.FogExp2(STUDIO_BG_COLOR, 0.012);
+
+// Standard Human Eye Height = 1.6m, natural studio perspective FOV 52
+const camera = new THREE.PerspectiveCamera(52, window.innerWidth / window.innerHeight, 0.05, 100);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -18,80 +23,72 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.45;
+renderer.toneMappingExposure = 1.25;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 container.appendChild(renderer.domElement);
 
 /* ============================================================
-   EXHIBITION HALL LIGHTING & ENVIRONMENT
+   STUDIO LIGHTING SETUP (MATCHING REFERENCE RENDER)
    ============================================================ */
-const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
+// Soft ambient illumination
+const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
 scene.add(ambientLight);
 
-const keyLight = new THREE.DirectionalLight(0xffffff, 3.0);
-keyLight.position.set(6, 12, 8);
+// Primary Soft Key Light (Front-Top-Right)
+const keyLight = new THREE.DirectionalLight(0xffffff, 2.2);
+keyLight.position.set(4, 9, 7);
 keyLight.castShadow = true;
 keyLight.shadow.mapSize.width = 2048;
 keyLight.shadow.mapSize.height = 2048;
 keyLight.shadow.camera.near = 0.5;
-keyLight.shadow.camera.far = 35;
-keyLight.shadow.camera.left = -9;
-keyLight.shadow.camera.right = 9;
-keyLight.shadow.camera.top = 9;
-keyLight.shadow.camera.bottom = -7;
+keyLight.shadow.camera.far = 25;
+keyLight.shadow.camera.left = -6;
+keyLight.shadow.camera.right = 6;
+keyLight.shadow.camera.top = 6;
+keyLight.shadow.camera.bottom = -4;
 keyLight.shadow.bias = -0.0001;
 keyLight.shadow.normalBias = 0.02;
+keyLight.shadow.radius = 2.0; // Soft contact shadows
 scene.add(keyLight);
 
-const fillLight = new THREE.DirectionalLight(0x5599ff, 2.0);
-fillLight.position.set(-7, 9, -4);
+// Soft Fill Light (Front-Top-Left)
+const fillLight = new THREE.DirectionalLight(0xf2f6ff, 1.4);
+fillLight.position.set(-5, 7, 5);
 scene.add(fillLight);
 
-// Truss Spotlights
-function createSpotlight(x, y, z, targetX, targetY, targetZ, color = 0xffffff, intensity = 9.0) {
-  const spot = new THREE.SpotLight(color, intensity, 16, Math.PI / 3, 0.35, 1.2);
-  spot.position.set(x, y, z);
-  spot.target.position.set(targetX, targetY, targetZ);
+// Back Rim Light (Behind Stand Top)
+const rimLight = new THREE.DirectionalLight(0xffffff, 1.0);
+rimLight.position.set(0, 8, -4);
+scene.add(rimLight);
+
+// 7 Truss Spotlights illuminating motor components along the top beam
+const spotPositions = [-1.8, -1.2, -0.6, 0.0, 0.6, 1.2, 1.8];
+spotPositions.forEach((x) => {
+  const spot = new THREE.SpotLight(0xffffff, 4.5, 8.0, Math.PI / 4, 0.45, 1.2);
+  spot.position.set(x, 2.9, 0.3);
+  spot.target.position.set(x, 0.85, -0.29);
   scene.add(spot);
   scene.add(spot.target);
-  return spot;
-}
-
-const spotLeft = createSpotlight(-1.0, 3.5, 0.5, -1.0, 0.85, -0.29, 0xffffff, 9.0);
-const spotRight = createSpotlight(1.55, 3.5, 0.5, 1.55, 0.85, -0.29, 0xffffff, 9.0);
-const spotLogo = createSpotlight(-1.5, 3.0, 0.5, -1.55, 1.8, -0.74, 0x00d2ff, 7.0);
-
-// Point lights
-const pointLeft = new THREE.PointLight(0x00d2ff, 2.5, 5);
-pointLeft.position.set(-1.0, 1.2, 0.5);
-scene.add(pointLeft);
-
-const pointRight = new THREE.PointLight(0x00d2ff, 2.5, 5);
-pointRight.position.set(1.55, 1.2, 0.5);
-scene.add(pointRight);
-
-// Exhibition Hall Floor
-const hallFloorGeo = new THREE.PlaneGeometry(100, 100, 100, 100);
-const hallFloorMat = new THREE.MeshStandardMaterial({
-  color: 0x0d1322,
-  roughness: 0.25,
-  metalness: 0.5,
 });
-const hallFloor = new THREE.Mesh(hallFloorGeo, hallFloorMat);
-hallFloor.rotation.x = -Math.PI / 2;
-hallFloor.position.y = -0.001;
-hallFloor.receiveShadow = true;
-scene.add(hallFloor);
 
-const gridHelper = new THREE.GridHelper(100, 100, 0x00d2ff, 0x182438);
-gridHelper.position.y = 0.001;
-scene.add(gridHelper);
+// Soft Studio Floor with realistic contact reflection
+const studioFloorGeo = new THREE.PlaneGeometry(100, 100, 32, 32);
+const studioFloorMat = new THREE.MeshStandardMaterial({
+  color: STUDIO_FLOOR_COLOR,
+  roughness: 0.28,
+  metalness: 0.15,
+});
+const studioFloor = new THREE.Mesh(studioFloorGeo, studioFloorMat);
+studioFloor.rotation.x = -Math.PI / 2;
+studioFloor.position.y = -0.001;
+studioFloor.receiveShadow = true;
+scene.add(studioFloor);
 
 /* ============================================================
    FIRST-PERSON CONTROLLER & MOVEMENT
    ============================================================ */
 const player = {
-  pos: new THREE.Vector3(0, 1.6, 4.8),
+  pos: new THREE.Vector3(0, 1.6, 4.2), // Perfectly framed at 4.2m in front of booth
   velocity: new THREE.Vector3(0, 0, 0),
   pitch: -0.04,
   yaw: 0.0,
@@ -102,7 +99,7 @@ const player = {
 
 function updateCamera() {
   if (isNaN(player.pos.x) || isNaN(player.pos.y) || isNaN(player.pos.z)) {
-    player.pos.set(0, 1.6, 4.8);
+    player.pos.set(0, 1.6, 4.2);
   }
   if (isNaN(player.pitch)) player.pitch = 0;
   if (isNaN(player.yaw)) player.yaw = 0;
@@ -113,7 +110,7 @@ function updateCamera() {
 }
 
 function resetPlayerView() {
-  player.pos.set(0, 1.6, 4.8);
+  player.pos.set(0, 1.6, 4.2);
   player.velocity.set(0, 0, 0);
   player.pitch = -0.04;
   player.yaw = 0.0;
@@ -167,7 +164,7 @@ document.addEventListener('pointerlockchange', () => {
   isPointerLocked = (document.pointerLockElement === renderer.domElement);
 });
 
-// Touch controls for mobile
+// Touch controls for mobile/tablet
 let touchStartX = 0;
 let touchStartY = 0;
 renderer.domElement.addEventListener('touchstart', (e) => {
@@ -298,11 +295,11 @@ function hideLoadingBar() {
 
   setTimeout(() => {
     if (topLoadingBar) topLoadingBar.classList.add('hidden');
-  }, 600);
+  }, 400);
 }
 
 /* ============================================================
-   LOAD 3D GLTF MODEL
+   LOAD 3D GLTF MODEL & REFINE PBR MATERIALS
    ============================================================ */
 const gltfLoader = new GLTFLoader();
 const candidateUrls = [
@@ -338,18 +335,42 @@ function tryLoad() {
 
           if (child.material) {
             child.material.side = THREE.DoubleSide;
-            child.material.roughness = Math.max(0.15, child.material.roughness || 0.35);
             const matName = (child.material.name || '').toLowerCase();
             const objName = (child.name || '').toLowerCase();
-            if (
-              matName.includes('led') || 
-              matName.includes('underglow') || 
-              objName.includes('led') || 
-              objName.includes('glow') ||
-              matName.includes('graphic') ||
-              objName.includes('graphic')
-            ) {
+
+            // PBR adjustments to match reference studio render
+            if (matName.includes('copper')) {
+              child.material.metalness = 0.92;
+              child.material.roughness = 0.22;
+              child.material.color = new THREE.Color(0xd47a46);
+            } else if (matName.includes('darksteel') || matName.includes('motordark') || matName.includes('gearboxdark')) {
+              child.material.metalness = 0.85;
+              child.material.roughness = 0.32;
+            } else if (matName.includes('steel') || matName.includes('metallic') || matName.includes('inverter')) {
+              child.material.metalness = 0.90;
+              child.material.roughness = 0.20;
+            } else if (matName.includes('supportglass')) {
+              child.material.transparent = true;
+              child.material.opacity = 0.4;
+              child.material.roughness = 0.05;
+              child.material.metalness = 0.1;
+            } else if (matName.includes('glowwhite') || objName.includes('led_strip')) {
+              child.material.emissive = new THREE.Color(0xffffff);
+              child.material.emissiveIntensity = 3.5;
+            } else if (matName.includes('glowblue') || objName.includes('underglow')) {
+              child.material.emissive = new THREE.Color(0x00d2ff);
               child.material.emissiveIntensity = 2.5;
+            } else if (matName.includes('podiumnavy')) {
+              child.material.color = new THREE.Color(0x053a78);
+              child.material.roughness = 0.35;
+              child.material.metalness = 0.1;
+            } else if (matName.includes('podiumtop') || matName.includes('floor')) {
+              child.material.color = new THREE.Color(0xf2f4f8);
+              child.material.roughness = 0.22;
+              child.material.metalness = 0.05;
+            } else if (matName.includes('wall')) {
+              child.material.color = new THREE.Color(0xeff2f6);
+              child.material.roughness = 0.50;
             }
           }
         }
@@ -448,10 +469,6 @@ function animate() {
   }
 
   updatePlayerPhysics(delta);
-
-  const time = clock.getElapsedTime();
-  spotLeft.position.y = 3.5 + Math.sin(time * 0.8) * 0.05;
-  spotRight.position.y = 3.5 + Math.cos(time * 0.8) * 0.05;
 
   renderer.render(scene, camera);
 }
