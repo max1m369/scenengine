@@ -7,15 +7,15 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 const container = document.getElementById('canvas-container');
 const scene = new THREE.Scene();
 
-// Studio neutral gray background matching the reference render
-const STUDIO_BG_COLOR = 0x80858e;
-const STUDIO_FLOOR_COLOR = 0x90959e;
+// Studio neutral gray background matching cycles_render.png
+const STUDIO_BG_COLOR = 0x9398a0;
+const STUDIO_FLOOR_COLOR = 0xa4a9b2;
 
 scene.background = new THREE.Color(STUDIO_BG_COLOR);
-scene.fog = new THREE.FogExp2(STUDIO_BG_COLOR, 0.012);
+scene.fog = new THREE.FogExp2(STUDIO_BG_COLOR, 0.015);
 
-// Standard Human Eye Height = 1.6m, natural studio perspective FOV 52
-const camera = new THREE.PerspectiveCamera(52, window.innerWidth / window.innerHeight, 0.05, 100);
+// Human Eye Height = 1.6m, natural architectural perspective FOV 48
+const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.05, 100);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -23,60 +23,19 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.25;
+renderer.toneMappingExposure = 1.05; // Balanced exposure matching Cycles render
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 container.appendChild(renderer.domElement);
 
 /* ============================================================
-   STUDIO LIGHTING SETUP (MATCHING REFERENCE RENDER)
+   STUDIO CYCLORAMA FLOOR & BALANCED LIGHTING (CYCLES MATCH)
    ============================================================ */
-// Soft ambient illumination
-const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
-scene.add(ambientLight);
-
-// Primary Soft Key Light (Front-Top-Right)
-const keyLight = new THREE.DirectionalLight(0xffffff, 2.2);
-keyLight.position.set(4, 9, 7);
-keyLight.castShadow = true;
-keyLight.shadow.mapSize.width = 2048;
-keyLight.shadow.mapSize.height = 2048;
-keyLight.shadow.camera.near = 0.5;
-keyLight.shadow.camera.far = 25;
-keyLight.shadow.camera.left = -6;
-keyLight.shadow.camera.right = 6;
-keyLight.shadow.camera.top = 6;
-keyLight.shadow.camera.bottom = -4;
-keyLight.shadow.bias = -0.0001;
-keyLight.shadow.normalBias = 0.02;
-keyLight.shadow.radius = 2.0; // Soft contact shadows
-scene.add(keyLight);
-
-// Soft Fill Light (Front-Top-Left)
-const fillLight = new THREE.DirectionalLight(0xf2f6ff, 1.4);
-fillLight.position.set(-5, 7, 5);
-scene.add(fillLight);
-
-// Back Rim Light (Behind Stand Top)
-const rimLight = new THREE.DirectionalLight(0xffffff, 1.0);
-rimLight.position.set(0, 8, -4);
-scene.add(rimLight);
-
-// 7 Truss Spotlights illuminating motor components along the top beam
-const spotPositions = [-1.8, -1.2, -0.6, 0.0, 0.6, 1.2, 1.8];
-spotPositions.forEach((x) => {
-  const spot = new THREE.SpotLight(0xffffff, 4.5, 8.0, Math.PI / 4, 0.45, 1.2);
-  spot.position.set(x, 2.9, 0.3);
-  spot.target.position.set(x, 0.85, -0.29);
-  scene.add(spot);
-  scene.add(spot.target);
-});
-
-// Soft Studio Floor with realistic contact reflection
-const studioFloorGeo = new THREE.PlaneGeometry(100, 100, 32, 32);
+// Smooth studio floor
+const studioFloorGeo = new THREE.PlaneGeometry(60, 60);
 const studioFloorMat = new THREE.MeshStandardMaterial({
   color: STUDIO_FLOOR_COLOR,
-  roughness: 0.28,
-  metalness: 0.15,
+  roughness: 0.38,
+  metalness: 0.08,
 });
 const studioFloor = new THREE.Mesh(studioFloorGeo, studioFloorMat);
 studioFloor.rotation.x = -Math.PI / 2;
@@ -84,22 +43,75 @@ studioFloor.position.y = -0.001;
 studioFloor.receiveShadow = true;
 scene.add(studioFloor);
 
+// Studio cyclorama back wall
+const studioWallGeo = new THREE.PlaneGeometry(60, 30);
+const studioWallMat = new THREE.MeshStandardMaterial({
+  color: STUDIO_BG_COLOR,
+  roughness: 0.65,
+  metalness: 0.02,
+});
+const studioWall = new THREE.Mesh(studioWallGeo, studioWallMat);
+studioWall.position.set(0, 10, -5.0);
+studioWall.receiveShadow = true;
+scene.add(studioWall);
+
+// Ambient Studio Light
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
+scene.add(ambientLight);
+
+// Primary Key Light (Front-Top-Right, soft studio warmth)
+const keyLight = new THREE.DirectionalLight(0xfffbf2, 1.4);
+keyLight.position.set(3.5, 7.5, 6.0);
+keyLight.castShadow = true;
+keyLight.shadow.mapSize.width = 2048;
+keyLight.shadow.mapSize.height = 2048;
+keyLight.shadow.camera.near = 0.5;
+keyLight.shadow.camera.far = 25;
+keyLight.shadow.camera.left = -5.5;
+keyLight.shadow.camera.right = 5.5;
+keyLight.shadow.camera.top = 5.5;
+keyLight.shadow.camera.bottom = -3.5;
+keyLight.shadow.bias = -0.0001;
+keyLight.shadow.normalBias = 0.02;
+keyLight.shadow.radius = 2.5;
+scene.add(keyLight);
+
+// Soft Fill Light (Front-Top-Left)
+const fillLight = new THREE.DirectionalLight(0xedf4ff, 0.9);
+fillLight.position.set(-4.5, 6.5, 5.0);
+scene.add(fillLight);
+
+// Back Rim Light (Behind Stand)
+const rimLight = new THREE.DirectionalLight(0xffffff, 0.6);
+rimLight.position.set(0, 6.0, -3.0);
+scene.add(rimLight);
+
+// 7 Truss Spotlights illuminating components along the beam
+const spotPositions = [-1.8, -1.2, -0.6, 0.0, 0.6, 1.2, 1.8];
+spotPositions.forEach((x) => {
+  const spot = new THREE.SpotLight(0xffffff, 2.2, 7.0, Math.PI / 4, 0.55, 1.2);
+  spot.position.set(x, 2.9, 0.35);
+  spot.target.position.set(x, 0.85, -0.29);
+  scene.add(spot);
+  scene.add(spot.target);
+});
+
 /* ============================================================
-   FIRST-PERSON CONTROLLER & MOVEMENT
+   FIRST-PERSON CONTROLLER & STRICT VISITOR BOUNDS
    ============================================================ */
 const player = {
-  pos: new THREE.Vector3(0, 1.6, 4.2), // Perfectly framed at 4.2m in front of booth
+  pos: new THREE.Vector3(0, 1.55, 4.3),
   velocity: new THREE.Vector3(0, 0, 0),
-  pitch: -0.04,
+  pitch: -0.03,
   yaw: 0.0,
   radius: 0.35,
-  height: 1.6,
+  height: 1.55,
   onGround: true
 };
 
 function updateCamera() {
   if (isNaN(player.pos.x) || isNaN(player.pos.y) || isNaN(player.pos.z)) {
-    player.pos.set(0, 1.6, 4.2);
+    player.pos.set(0, 1.55, 4.3);
   }
   if (isNaN(player.pitch)) player.pitch = 0;
   if (isNaN(player.yaw)) player.yaw = 0;
@@ -110,9 +122,9 @@ function updateCamera() {
 }
 
 function resetPlayerView() {
-  player.pos.set(0, 1.6, 4.2);
+  player.pos.set(0, 1.55, 4.3);
   player.velocity.set(0, 0, 0);
-  player.pitch = -0.04;
+  player.pitch = -0.03;
   player.yaw = 0.0;
   updateCamera();
 }
@@ -232,11 +244,14 @@ window.addEventListener('keyup', (e) => {
 });
 
 /* ============================================================
-   COLLISION BOXES (PODIUMS & BACKDROP WALL)
+   STAND OBSTACLE COLLISION BOXES
    ============================================================ */
 const obstacles = [
+  // Left Podium
   { minX: -2.15, maxX: 0.15, minZ: -0.80, maxZ: 0.35, minY: 0, maxY: 1.0 },
+  // Right Podium
   { minX: 0.95, maxX: 2.15, minZ: -0.80, maxZ: 0.35, minY: 0, maxY: 1.0 },
+  // Backdrop Wall
   { minX: -2.80, maxX: 2.80, minZ: -1.20, maxZ: -0.65, minY: 0, maxY: 3.0 }
 ];
 
@@ -338,39 +353,39 @@ function tryLoad() {
             const matName = (child.material.name || '').toLowerCase();
             const objName = (child.name || '').toLowerCase();
 
-            // PBR adjustments to match reference studio render
+            // PBR adjustments strictly matching cycles_render.png
             if (matName.includes('copper')) {
-              child.material.metalness = 0.92;
-              child.material.roughness = 0.22;
-              child.material.color = new THREE.Color(0xd47a46);
+              child.material.metalness = 0.90;
+              child.material.roughness = 0.25;
+              child.material.color = new THREE.Color(0xd67e48);
             } else if (matName.includes('darksteel') || matName.includes('motordark') || matName.includes('gearboxdark')) {
               child.material.metalness = 0.85;
-              child.material.roughness = 0.32;
+              child.material.roughness = 0.35;
             } else if (matName.includes('steel') || matName.includes('metallic') || matName.includes('inverter')) {
               child.material.metalness = 0.90;
-              child.material.roughness = 0.20;
+              child.material.roughness = 0.22;
             } else if (matName.includes('supportglass')) {
               child.material.transparent = true;
-              child.material.opacity = 0.4;
+              child.material.opacity = 0.35;
               child.material.roughness = 0.05;
               child.material.metalness = 0.1;
             } else if (matName.includes('glowwhite') || objName.includes('led_strip')) {
               child.material.emissive = new THREE.Color(0xffffff);
-              child.material.emissiveIntensity = 3.5;
+              child.material.emissiveIntensity = 2.0;
             } else if (matName.includes('glowblue') || objName.includes('underglow')) {
               child.material.emissive = new THREE.Color(0x00d2ff);
-              child.material.emissiveIntensity = 2.5;
+              child.material.emissiveIntensity = 1.2;
             } else if (matName.includes('podiumnavy')) {
               child.material.color = new THREE.Color(0x053a78);
-              child.material.roughness = 0.35;
-              child.material.metalness = 0.1;
+              child.material.roughness = 0.38;
+              child.material.metalness = 0.08;
             } else if (matName.includes('podiumtop') || matName.includes('floor')) {
-              child.material.color = new THREE.Color(0xf2f4f8);
-              child.material.roughness = 0.22;
-              child.material.metalness = 0.05;
+              child.material.color = new THREE.Color(0xf4f6f8);
+              child.material.roughness = 0.25;
+              child.material.metalness = 0.04;
             } else if (matName.includes('wall')) {
-              child.material.color = new THREE.Color(0xeff2f6);
-              child.material.roughness = 0.50;
+              child.material.color = new THREE.Color(0xf0f2f5);
+              child.material.roughness = 0.55;
             }
           }
         }
@@ -395,14 +410,14 @@ function tryLoad() {
 tryLoad();
 
 /* ============================================================
-   PHYSICS & MOVEMENT LOOP
+   PHYSICS & MOVEMENT LOOP (WITH STRICT VISITATION BOUNDARIES)
    ============================================================ */
 const moveDir = new THREE.Vector3();
 const forwardVec = new THREE.Vector3();
 const sideVec = new THREE.Vector3();
 
 function updatePlayerPhysics(delta) {
-  const speed = keys.sprint ? 5.5 : 3.0;
+  const speed = keys.sprint ? 4.5 : 2.8;
 
   const damping = Math.exp(-8 * delta) - 1;
   player.velocity.x += player.velocity.x * damping;
@@ -426,7 +441,7 @@ function updatePlayerPhysics(delta) {
   if (!player.onGround) {
     player.velocity.y -= 25 * delta;
   } else if (keys.jump) {
-    player.velocity.y = 7.0;
+    player.velocity.y = 6.0;
     player.onGround = false;
   }
 
@@ -434,16 +449,17 @@ function updatePlayerPhysics(delta) {
   player.pos.y += player.velocity.y * delta;
   player.pos.z += player.velocity.z * delta;
 
-  if (player.pos.y <= 1.6) {
-    player.pos.y = 1.6;
+  if (player.pos.y <= 1.55) {
+    player.pos.y = 1.55;
     player.velocity.y = 0;
     player.onGround = true;
   }
 
   resolveCollisions(player.pos, player.radius);
 
-  player.pos.x = THREE.MathUtils.clamp(player.pos.x, -30, 30);
-  player.pos.z = THREE.MathUtils.clamp(player.pos.z, -15, 30);
+  // STRICT VISITOR BOUNDS: No walking off into void or behind wall
+  player.pos.x = THREE.MathUtils.clamp(player.pos.x, -3.8, 3.8); // Left/right perimeter
+  player.pos.z = THREE.MathUtils.clamp(player.pos.z, 0.8, 5.8);  // In front of stand only
 
   updateCamera();
 }
