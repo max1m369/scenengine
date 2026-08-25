@@ -8,6 +8,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <script>
+    // Fix GitHub Pages path resolution when missing trailing slash
+    if (window.location.pathname === '/scenengine') {
+      window.location.replace('/scenengine/');
+    }
+  </script>
 </head>
 <body>
   <!-- 3D Canvas Container -->
@@ -228,7 +234,6 @@
     </div>
   </div>
 
-  <!-- Main JavaScript App Entry -->
   <script type="module" src="./main.js"></script>
 </body>
 </html>

@@ -6,7 +6,6 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { computeBoundsTree, disposeBoundsTree, acceleratedRaycast, MeshBVH, StaticGeometryGenerator } from 'three-mesh-bvh';
 import { Capsule } from 'three/examples/jsm/math/Capsule.js';
 
-// Setup accelerated BVH raycast and bounds tree on Three.js BufferGeometry
 THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
 THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
@@ -99,11 +98,9 @@ container.appendChild(renderer.domElement);
 /* ============================================================
    EXHIBITION HALL ENVIRONMENT & LIGHTING
    ============================================================ */
-// 1. Ambient Lighting (Cool blue fill)
 const ambientLight = new THREE.AmbientLight(0x99bbff, 0.85);
 scene.add(ambientLight);
 
-// 2. Main Key Sun/Ceiling Light (Soft directional shadows)
 const keyLight = new THREE.DirectionalLight(0xffffff, 2.2);
 keyLight.position.set(4, 8, 5);
 keyLight.castShadow = true;
@@ -119,12 +116,10 @@ keyLight.shadow.bias = -0.0001;
 keyLight.shadow.normalBias = 0.02;
 scene.add(keyLight);
 
-// 3. Fill Light
 const fillLight = new THREE.DirectionalLight(0x3a7bd5, 1.3);
 fillLight.position.set(-5, 6, -3);
 scene.add(fillLight);
 
-// 4. Exhibition Spotlights
 function createSpotlight(x, y, z, targetX, targetY, targetZ, color = 0xffffff, intensity = 4.5) {
   const spot = new THREE.SpotLight(color, intensity, 10, Math.PI / 4, 0.4, 1.5);
   spot.position.set(x, y, z);
@@ -138,7 +133,7 @@ const spotLeft = createSpotlight(-1.0, 3.2, 0.8, -1.0, 0.85, 0.3, 0xffffff, 6.0)
 const spotRight = createSpotlight(1.55, 3.2, 0.8, 1.55, 0.85, 0.3, 0xffffff, 6.0);
 const spotLogo = createSpotlight(-1.5, 3.0, 0.2, -1.55, 1.8, 0.74, 0x00d2ff, 4.0);
 
-// 5. Exhibition Hall Floor with dark grid
+// Exhibition Hall Floor
 const hallFloorGeo = new THREE.PlaneGeometry(60, 60, 60, 60);
 const hallFloorMat = new THREE.MeshStandardMaterial({
   color: 0x0c111e,
@@ -544,104 +539,119 @@ fullscreenBtn.addEventListener('click', () => {
 });
 
 /* ============================================================
-   LOAD 3D GLTF MODEL & BUILD BVH COLLIDER
+   MULTI-PATH ROBUST GLTF LOADER
    ============================================================ */
 const gltfLoader = new GLTFLoader();
 
-// Optional Draco decoder fallback from CDN
-const dracoLoader = new DRACOLoader();
-dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/');
-gltfLoader.setDRACOLoader(dracoLoader);
+function hideLoadingScreen() {
+  progressBar.style.width = '100%';
+  loadingPercent.textContent = '100%';
+  loadingStatus.textContent = 'Готово к просмотру!';
 
-loadingStatus.textContent = 'Загрузка 3D-модели стенда...';
-
-// Resolve model URL relative to Vite base
-const modelPath = `${import.meta.env.BASE_URL}booth.glb`;
-
-gltfLoader.load(
-  modelPath,
-  (gltf) => {
-    const model = gltf.scene;
-    scene.add(model);
-
-    const colliderMeshes = [];
-
-    model.traverse((child) => {
-      if (child.isMesh) {
-        child.castShadow = true;
-        child.receiveShadow = true;
-
-        if (child.material) {
-          child.material.roughness = Math.max(0.2, child.material.roughness || 0.4);
-          
-          const matName = (child.material.name || '').toLowerCase();
-          const objName = (child.name || '').toLowerCase();
-          if (
-            matName.includes('led') || 
-            matName.includes('underglow') || 
-            objName.includes('led') || 
-            objName.includes('glow') ||
-            matName.includes('graphic') ||
-            objName.includes('graphic')
-          ) {
-            child.material.emissiveIntensity = 2.0;
-          }
-        }
-        colliderMeshes.push(child);
-      }
-    });
-
-    loadingStatus.textContent = 'Инициализация физики стенда...';
-    
-    try {
-      if (colliderMeshes.length > 0) {
-        const staticGen = new StaticGeometryGenerator(colliderMeshes);
-        staticGen.attributes = ['position'];
-        const mergedGeometry = staticGen.generate();
-        mergedGeometry.computeBoundsTree();
-        
-        colliderMesh = new THREE.Mesh(mergedGeometry);
-        bvhCollider = mergedGeometry.boundsTree;
-      }
-    } catch(err) {
-      console.warn('BVH collider notice:', err);
-    }
-
-    progressBar.style.width = '100%';
-    loadingPercent.textContent = '100%';
-    loadingStatus.textContent = 'Готово к просмотру!';
-
-    setTimeout(() => {
-      loadingScreen.style.opacity = '0';
-      setTimeout(() => {
-        loadingScreen.classList.add('hidden');
-      }, 600);
-    }, 400);
-  },
-  (xhr) => {
-    if (xhr.lengthComputable && xhr.total > 0) {
-      const percent = Math.min(99, Math.round((xhr.loaded / xhr.total) * 100));
-      progressBar.style.width = percent + '%';
-      loadingPercent.textContent = percent + '%';
-    } else {
-      // Indeterminate progress animation
-      const current = parseInt(loadingPercent.textContent) || 0;
-      if (current < 90) {
-        const next = current + 15;
-        progressBar.style.width = next + '%';
-        loadingPercent.textContent = next + '%';
-      }
-    }
-  },
-  (error) => {
-    console.error('Error loading booth model:', error);
-    loadingStatus.textContent = 'Ошибка загрузки модели. Проверьте консоль.';
-    // Fallback unhide screen so user can still see scene
+  setTimeout(() => {
+    loadingScreen.style.opacity = '0';
     setTimeout(() => {
       loadingScreen.classList.add('hidden');
-    }, 2000);
+    }, 600);
+  }, 300);
+}
+
+// Candidates for GLB model URL
+const candidateUrls = [
+  './booth.glb',
+  'booth.glb',
+  '/scenengine/booth.glb',
+  './dist/booth.glb'
+];
+
+let loadAttemptIndex = 0;
+
+function tryLoadModel() {
+  if (loadAttemptIndex >= candidateUrls.length) {
+    console.warn('All candidate URLs exhausted. Proceeding with procedural stage fallback.');
+    hideLoadingScreen();
+    return;
   }
-);
+
+  const currentUrl = candidateUrls[loadAttemptIndex];
+  console.log(`[GLTF] Attempting to load model from: ${currentUrl}`);
+  loadingStatus.textContent = `Загрузка 3D-модели (${loadAttemptIndex + 1}/${candidateUrls.length})...`;
+
+  gltfLoader.load(
+    currentUrl,
+    (gltf) => {
+      console.log(`[GLTF] Successfully loaded model from ${currentUrl}`);
+      const model = gltf.scene;
+      scene.add(model);
+
+      const colliderMeshes = [];
+
+      model.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+
+          if (child.material) {
+            child.material.roughness = Math.max(0.2, child.material.roughness || 0.4);
+            const matName = (child.material.name || '').toLowerCase();
+            const objName = (child.name || '').toLowerCase();
+            if (
+              matName.includes('led') || 
+              matName.includes('underglow') || 
+              objName.includes('led') || 
+              objName.includes('glow') ||
+              matName.includes('graphic') ||
+              objName.includes('graphic')
+            ) {
+              child.material.emissiveIntensity = 2.0;
+            }
+          }
+          colliderMeshes.push(child);
+        }
+      });
+
+      try {
+        if (colliderMeshes.length > 0) {
+          const staticGen = new StaticGeometryGenerator(colliderMeshes);
+          staticGen.attributes = ['position'];
+          const mergedGeometry = staticGen.generate();
+          mergedGeometry.computeBoundsTree();
+          
+          colliderMesh = new THREE.Mesh(mergedGeometry);
+          bvhCollider = mergedGeometry.boundsTree;
+          console.log('[BVH] Collision tree successfully built.');
+        }
+      } catch(err) {
+        console.warn('[BVH] Fallback collider notice:', err);
+      }
+
+      hideLoadingScreen();
+    },
+    (xhr) => {
+      if (xhr.lengthComputable && xhr.total > 0) {
+        const percent = Math.min(99, Math.round((xhr.loaded / xhr.total) * 100));
+        progressBar.style.width = percent + '%';
+        loadingPercent.textContent = percent + '%';
+      }
+    },
+    (error) => {
+      console.warn(`[GLTF] Failed to load from ${currentUrl}:`, error);
+      loadAttemptIndex++;
+      tryLoadModel();
+    }
+  );
+}
+
+// Start loading
+tryLoadModel();
+
+// Fail-safe: if network hangs for 8s, always dismiss loading overlay
+setTimeout(() => {
+  if (!loadingScreen.classList.contains('hidden')) {
+    console.log('[FailSafe] Dismissing loading screen.');
+    hideLoadingScreen();
+  }
+}, 8000);
 
 /* ============================================================
    COLLISION & MOVEMENT UPDATE LOOP
@@ -689,7 +699,6 @@ function updatePlayer(delta) {
   const deltaVector = playerVelocity.clone().multiplyScalar(delta);
   playerCapsule.translate(deltaVector);
 
-  // BVH Collision Resolution
   playerOnFloor = false;
   if (colliderMesh && bvhCollider) {
     const tempBox = new THREE.Box3();
@@ -720,7 +729,6 @@ function updatePlayer(delta) {
     });
   }
 
-  // Floor boundary level
   if (playerCapsule.start.y < 0.35) {
     playerCapsule.start.y = 0.35;
     playerCapsule.end.y = 1.35;
@@ -728,7 +736,6 @@ function updatePlayer(delta) {
     playerOnFloor = true;
   }
 
-  // Pavilion boundaries
   playerCapsule.start.x = THREE.MathUtils.clamp(playerCapsule.start.x, -15, 15);
   playerCapsule.end.x = THREE.MathUtils.clamp(playerCapsule.end.x, -15, 15);
   playerCapsule.start.z = THREE.MathUtils.clamp(playerCapsule.start.z, -10, 15);
