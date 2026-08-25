@@ -1,11 +1,11 @@
 ﻿import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { computeBoundsTree, disposeBoundsTree, acceleratedRaycast, MeshBVH, StaticGeometryGenerator } from 'three-mesh-bvh';
 import { Capsule } from 'three/examples/jsm/math/Capsule.js';
 
+// Setup accelerated BVH
 THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
 THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
@@ -79,11 +79,12 @@ const sfx = new SoundFX();
    ============================================================ */
 const container = document.getElementById('canvas-container');
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x080c14);
-scene.fog = new THREE.FogExp2(0x080c14, 0.035);
+scene.background = new THREE.Color(0x0c121e);
+scene.fog = new THREE.FogExp2(0x0c121e, 0.025);
 
-const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.05, 100);
-camera.position.set(0, 1.6, 4.2);
+const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.05, 100);
+camera.position.set(0, 1.6, 5.0);
+camera.lookAt(0, 1.0, 0.5);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -91,37 +92,38 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.25;
+renderer.toneMappingExposure = 1.35;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 container.appendChild(renderer.domElement);
 
 /* ============================================================
    EXHIBITION HALL ENVIRONMENT & LIGHTING
    ============================================================ */
-const ambientLight = new THREE.AmbientLight(0x99bbff, 0.85);
+const ambientLight = new THREE.AmbientLight(0xddeeff, 1.1);
 scene.add(ambientLight);
 
-const keyLight = new THREE.DirectionalLight(0xffffff, 2.2);
-keyLight.position.set(4, 8, 5);
+const keyLight = new THREE.DirectionalLight(0xffffff, 2.5);
+keyLight.position.set(5, 10, 7);
 keyLight.castShadow = true;
 keyLight.shadow.mapSize.width = 2048;
 keyLight.shadow.mapSize.height = 2048;
 keyLight.shadow.camera.near = 0.5;
 keyLight.shadow.camera.far = 25;
-keyLight.shadow.camera.left = -6;
-keyLight.shadow.camera.right = 6;
-keyLight.shadow.camera.top = 6;
-keyLight.shadow.camera.bottom = -4;
+keyLight.shadow.camera.left = -7;
+keyLight.shadow.camera.right = 7;
+keyLight.shadow.camera.top = 7;
+keyLight.shadow.camera.bottom = -5;
 keyLight.shadow.bias = -0.0001;
 keyLight.shadow.normalBias = 0.02;
 scene.add(keyLight);
 
-const fillLight = new THREE.DirectionalLight(0x3a7bd5, 1.3);
-fillLight.position.set(-5, 6, -3);
+const fillLight = new THREE.DirectionalLight(0x4488ff, 1.5);
+fillLight.position.set(-6, 7, -3);
 scene.add(fillLight);
 
-function createSpotlight(x, y, z, targetX, targetY, targetZ, color = 0xffffff, intensity = 4.5) {
-  const spot = new THREE.SpotLight(color, intensity, 10, Math.PI / 4, 0.4, 1.5);
+// Truss Spotlights
+function createSpotlight(x, y, z, targetX, targetY, targetZ, color = 0xffffff, intensity = 6.0) {
+  const spot = new THREE.SpotLight(color, intensity, 12, Math.PI / 3.5, 0.35, 1.2);
   spot.position.set(x, y, z);
   spot.target.position.set(targetX, targetY, targetZ);
   scene.add(spot);
@@ -129,24 +131,33 @@ function createSpotlight(x, y, z, targetX, targetY, targetZ, color = 0xffffff, i
   return spot;
 }
 
-const spotLeft = createSpotlight(-1.0, 3.2, 0.8, -1.0, 0.85, 0.3, 0xffffff, 6.0);
-const spotRight = createSpotlight(1.55, 3.2, 0.8, 1.55, 0.85, 0.3, 0xffffff, 6.0);
-const spotLogo = createSpotlight(-1.5, 3.0, 0.2, -1.55, 1.8, 0.74, 0x00d2ff, 4.0);
+const spotLeft = createSpotlight(-1.0, 3.5, 1.0, -1.0, 0.85, 0.3, 0xffffff, 7.0);
+const spotRight = createSpotlight(1.55, 3.5, 1.0, 1.55, 0.85, 0.3, 0xffffff, 7.0);
+const spotLogo = createSpotlight(-1.5, 3.0, 0.5, -1.55, 1.8, 0.74, 0x00d2ff, 5.0);
+
+// Point lights for specular highlights
+const pointLeft = new THREE.PointLight(0x00d2ff, 1.5, 4);
+pointLeft.position.set(-1.0, 1.2, 0.8);
+scene.add(pointLeft);
+
+const pointRight = new THREE.PointLight(0x00d2ff, 1.5, 4);
+pointRight.position.set(1.55, 1.2, 0.8);
+scene.add(pointRight);
 
 // Exhibition Hall Floor
-const hallFloorGeo = new THREE.PlaneGeometry(60, 60, 60, 60);
+const hallFloorGeo = new THREE.PlaneGeometry(80, 80, 80, 80);
 const hallFloorMat = new THREE.MeshStandardMaterial({
-  color: 0x0c111e,
-  roughness: 0.25,
-  metalness: 0.5,
+  color: 0x0e1422,
+  roughness: 0.2,
+  metalness: 0.6,
 });
 const hallFloor = new THREE.Mesh(hallFloorGeo, hallFloorMat);
 hallFloor.rotation.x = -Math.PI / 2;
-hallFloor.position.y = -0.002;
+hallFloor.position.y = -0.001;
 hallFloor.receiveShadow = true;
 scene.add(hallFloor);
 
-const gridHelper = new THREE.GridHelper(60, 60, 0x00d2ff, 0x16243b);
+const gridHelper = new THREE.GridHelper(80, 80, 0x00d2ff, 0x1a2638);
 gridHelper.position.y = 0.001;
 scene.add(gridHelper);
 
@@ -160,7 +171,7 @@ orbitControls.enableDamping = true;
 orbitControls.dampingFactor = 0.05;
 orbitControls.maxPolarAngle = Math.PI / 2 - 0.02;
 orbitControls.minDistance = 0.5;
-orbitControls.maxDistance = 18;
+orbitControls.maxDistance = 25;
 orbitControls.enabled = false;
 
 /* ============================================================
@@ -168,8 +179,8 @@ orbitControls.enabled = false;
    ============================================================ */
 const GRAVITY = 25;
 const playerCapsule = new Capsule(
-  new THREE.Vector3(0, 0.35, 4.2),
-  new THREE.Vector3(0, 1.35, 4.2),
+  new THREE.Vector3(0, 0.35, 5.0),
+  new THREE.Vector3(0, 1.35, 5.0),
   0.35
 );
 
@@ -179,35 +190,80 @@ let playerOnFloor = false;
 let colliderMesh = null;
 let bvhCollider = null;
 
-const keyStates = {
-  KeyW: false,
-  KeyA: false,
-  KeyS: false,
-  KeyD: false,
-  ArrowUp: false,
-  ArrowLeft: false,
-  ArrowDown: false,
-  ArrowRight: false,
-  ShiftLeft: false,
-  ShiftRight: false,
-  Space: false
+// Universal key map supporting English & Russian layout
+const keys = {
+  forward: false,
+  backward: false,
+  left: false,
+  right: false,
+  sprint: false,
+  jump: false
 };
 
-document.addEventListener('keydown', (e) => {
-  if (keyStates.hasOwnProperty(e.code)) {
-    keyStates[e.code] = true;
-  }
-  if (e.code === 'KeyE') {
+function handleKeyDown(e) {
+  const code = e.code;
+  const key = e.key ? e.key.toLowerCase() : '';
+
+  if (code === 'KeyW' || key === 'w' || key === 'ц' || code === 'ArrowUp') keys.forward = true;
+  if (code === 'KeyS' || key === 's' || key === 'ы' || code === 'ArrowDown') keys.backward = true;
+  if (code === 'KeyA' || key === 'a' || key === 'ф' || code === 'ArrowLeft') keys.left = true;
+  if (code === 'KeyD' || key === 'd' || key === 'в' || code === 'ArrowRight') keys.right = true;
+  if (code === 'ShiftLeft' || code === 'ShiftRight' || e.shiftKey) keys.sprint = true;
+  if (code === 'Space' || key === ' ') keys.jump = true;
+
+  if (code === 'KeyE' || key === 'e' || key === 'у') {
     handleInteractKey();
   }
-  if (e.code === 'KeyC') {
+  if (code === 'KeyC' || key === 'c' || key === 'с') {
     toggleCameraMode();
+  }
+}
+
+function handleKeyUp(e) {
+  const code = e.code;
+  const key = e.key ? e.key.toLowerCase() : '';
+
+  if (code === 'KeyW' || key === 'w' || key === 'ц' || code === 'ArrowUp') keys.forward = false;
+  if (code === 'KeyS' || key === 's' || key === 'ы' || code === 'ArrowDown') keys.backward = false;
+  if (code === 'KeyA' || key === 'a' || key === 'ф' || code === 'ArrowLeft') keys.left = false;
+  if (code === 'KeyD' || key === 'd' || key === 'в' || code === 'ArrowRight') keys.right = false;
+  if (code === 'ShiftLeft' || code === 'ShiftRight' || !e.shiftKey) keys.sprint = false;
+  if (code === 'Space' || key === ' ') keys.jump = false;
+}
+
+window.addEventListener('keydown', handleKeyDown);
+window.addEventListener('keyup', handleKeyUp);
+
+// Mouse drag look when pointer lock is not active
+let isMouseDown = false;
+let prevMouseX = 0;
+let prevMouseY = 0;
+
+renderer.domElement.addEventListener('mousedown', (e) => {
+  if (cameraMode === 'fps' && !fpsControls.isLocked) {
+    isMouseDown = true;
+    prevMouseX = e.clientX;
+    prevMouseY = e.clientY;
   }
 });
 
-document.addEventListener('keyup', (e) => {
-  if (keyStates.hasOwnProperty(e.code)) {
-    keyStates[e.code] = false;
+window.addEventListener('mouseup', () => {
+  isMouseDown = false;
+});
+
+window.addEventListener('mousemove', (e) => {
+  if (cameraMode === 'fps' && isMouseDown && !fpsControls.isLocked) {
+    const deltaX = e.clientX - prevMouseX;
+    const deltaY = e.clientY - prevMouseY;
+    prevMouseX = e.clientX;
+    prevMouseY = e.clientY;
+
+    const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+    euler.setFromQuaternion(camera.quaternion);
+    euler.y -= deltaX * 0.003;
+    euler.x -= deltaY * 0.003;
+    euler.x = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, euler.x));
+    camera.quaternion.setFromEuler(euler);
   }
 });
 
@@ -221,7 +277,7 @@ const HOTSPOTS_DATA = [
     category: 'КОНСТРУКЦИЯ И КОМПОНЕНТЫ',
     subtitle: 'Синхронная машина с постоянными магнитами (PMSM)',
     worldPos: new THREE.Vector3(-1.0, 0.85, 0.29),
-    cameraPos: new THREE.Vector3(-1.0, 1.3, 1.7),
+    cameraPos: new THREE.Vector3(-1.0, 1.3, 1.8),
     lookTarget: new THREE.Vector3(-1.0, 0.85, 0.29),
     metrics: [
       { val: '150 кВт', lbl: 'Пиковая мощность' },
@@ -241,7 +297,7 @@ const HOTSPOTS_DATA = [
     category: 'ТЯГОВЫЙ СИЛОВОЙ МОДУЛЬ',
     subtitle: 'Компактный агрегат 3-в-1 для легкового и коммерческого транспорта',
     worldPos: new THREE.Vector3(1.55, 0.85, 0.29),
-    cameraPos: new THREE.Vector3(1.55, 1.3, 1.7),
+    cameraPos: new THREE.Vector3(1.55, 1.3, 1.8),
     lookTarget: new THREE.Vector3(1.55, 0.85, 0.29),
     metrics: [
       { val: '16 000', lbl: 'Об/мин макс.' },
@@ -261,7 +317,7 @@ const HOTSPOTS_DATA = [
     category: 'СИЛОВАЯ ЭЛЕКТРОНИКА',
     subtitle: 'Блок управления тяговым приводом высокой частоты',
     worldPos: new THREE.Vector3(-1.28, 1.45, 0.72),
-    cameraPos: new THREE.Vector3(-1.28, 1.6, 1.8),
+    cameraPos: new THREE.Vector3(-1.28, 1.6, 1.9),
     lookTarget: new THREE.Vector3(-1.28, 1.45, 0.72),
     metrics: [
       { val: '800 В', lbl: 'Напряжение сети' },
@@ -281,8 +337,8 @@ const HOTSPOTS_DATA = [
     category: 'ЭКОСИСТЕМА РОСАТОМ',
     subtitle: 'Стратегия развития электрического движения в РФ',
     worldPos: new THREE.Vector3(0.85, 1.6, 0.72),
-    cameraPos: new THREE.Vector3(0.85, 1.6, 2.3),
-    lookTarget: new THREE.Vector3(0.85, 1.6, 0.72),
+    cameraPos: new THREE.Vector3(0.85, 1.6, 2.5),
+    lookTarget: new THREE.Vector3(0.85, 1.5, 0.72),
     metrics: [
       { val: 'Гигафабрика', lbl: 'Калининград' },
       { val: '4 ГВт·ч', lbl: 'Емкость/год' },
@@ -301,7 +357,7 @@ const HOTSPOTS_DATA = [
     category: 'МЕХАНИЧЕСКАЯ ТРАНСМИССИЯ',
     subtitle: 'Интегрированный цилиндрический косозубый редуктор',
     worldPos: new THREE.Vector3(-0.60, 0.85, 0.15),
-    cameraPos: new THREE.Vector3(-0.60, 1.3, 1.4),
+    cameraPos: new THREE.Vector3(-0.60, 1.3, 1.5),
     lookTarget: new THREE.Vector3(-0.60, 0.85, 0.15),
     metrics: [
       { val: '9.2:1', lbl: 'Передаточное число' },
@@ -317,7 +373,6 @@ const HOTSPOTS_DATA = [
   }
 ];
 
-// Create 3D Hotspot DOM Elements
 const hotspotElements = [];
 HOTSPOTS_DATA.forEach(data => {
   const el = document.createElement('div');
@@ -371,9 +426,8 @@ startBtn.addEventListener('click', () => {
   sfx.playWhoosh();
   if (cameraMode === 'fps') {
     fpsControls.lock();
-  } else {
-    blocker.classList.add('hidden');
   }
+  blocker.classList.add('hidden');
 });
 
 fpsControls.addEventListener('lock', () => {
@@ -384,16 +438,19 @@ fpsControls.addEventListener('lock', () => {
 
 fpsControls.addEventListener('unlock', () => {
   if (cameraMode === 'fps' && detailDrawer.classList.contains('hidden')) {
-    blocker.classList.remove('hidden');
+    // Keep HUD usable
   }
-  reticle.classList.add('hidden');
+});
+
+// Click on canvas to lock pointer
+renderer.domElement.addEventListener('click', () => {
+  if (cameraMode === 'fps' && !fpsControls.isLocked && detailDrawer.classList.contains('hidden')) {
+    fpsControls.lock();
+  }
 });
 
 closeDrawerBtn.addEventListener('click', () => {
   detailDrawer.classList.add('hidden');
-  if (cameraMode === 'fps') {
-    fpsControls.lock();
-  }
 });
 
 focusExhibitBtn.addEventListener('click', () => {
@@ -437,11 +494,11 @@ function handleInteractKey() {
 // Teleport Chips Navigation
 const navChips = document.querySelectorAll('.nav-chip');
 const TELEPORT_POINTS = {
-  overview: { pos: new THREE.Vector3(0, 1.6, 4.2), look: new THREE.Vector3(0, 1.0, 0.3) },
-  exploded: { pos: new THREE.Vector3(-1.0, 1.5, 2.0), look: new THREE.Vector3(-1.0, 0.85, 0.3) },
-  assembled: { pos: new THREE.Vector3(1.55, 1.5, 2.0), look: new THREE.Vector3(1.55, 0.85, 0.3) },
-  inverter: { pos: new THREE.Vector3(-1.28, 1.6, 2.0), look: new THREE.Vector3(-1.28, 1.45, 0.72) },
-  infoboard: { pos: new THREE.Vector3(0.85, 1.6, 2.4), look: new THREE.Vector3(0.85, 1.5, 0.72) }
+  overview: { pos: new THREE.Vector3(0, 1.6, 5.0), look: new THREE.Vector3(0, 1.0, 0.5) },
+  exploded: { pos: new THREE.Vector3(-1.0, 1.4, 2.0), look: new THREE.Vector3(-1.0, 0.85, 0.3) },
+  assembled: { pos: new THREE.Vector3(1.55, 1.4, 2.0), look: new THREE.Vector3(1.55, 0.85, 0.3) },
+  inverter: { pos: new THREE.Vector3(-1.28, 1.6, 2.1), look: new THREE.Vector3(-1.28, 1.45, 0.72) },
+  infoboard: { pos: new THREE.Vector3(0.85, 1.6, 2.5), look: new THREE.Vector3(0.85, 1.5, 0.72) }
 };
 
 navChips.forEach(chip => {
@@ -499,7 +556,6 @@ function toggleCameraMode() {
     orbitControls.enabled = false;
     fpsControls.enabled = true;
     reticle.classList.remove('hidden');
-    fpsControls.lock();
   }
 }
 
@@ -509,23 +565,23 @@ lightingModeBtn.addEventListener('click', () => {
   isShowcaseNight = !isShowcaseNight;
   sfx.playChirp();
   if (isShowcaseNight) {
-    scene.background.set(0x030508);
-    scene.fog.color.set(0x030508);
-    ambientLight.intensity = 0.25;
-    keyLight.intensity = 0.8;
-    fillLight.intensity = 0.4;
-    spotLeft.intensity = 8.0;
-    spotRight.intensity = 8.0;
-    spotLogo.intensity = 6.0;
+    scene.background.set(0x04060c);
+    scene.fog.color.set(0x04060c);
+    ambientLight.intensity = 0.35;
+    keyLight.intensity = 1.0;
+    fillLight.intensity = 0.5;
+    spotLeft.intensity = 10.0;
+    spotRight.intensity = 10.0;
+    spotLogo.intensity = 8.0;
   } else {
-    scene.background.set(0x080c14);
-    scene.fog.color.set(0x080c14);
-    ambientLight.intensity = 0.85;
-    keyLight.intensity = 2.2;
-    fillLight.intensity = 1.3;
-    spotLeft.intensity = 6.0;
-    spotRight.intensity = 6.0;
-    spotLogo.intensity = 4.0;
+    scene.background.set(0x0c121e);
+    scene.fog.color.set(0x0c121e);
+    ambientLight.intensity = 1.1;
+    keyLight.intensity = 2.5;
+    fillLight.intensity = 1.5;
+    spotLeft.intensity = 7.0;
+    spotRight.intensity = 7.0;
+    spotLogo.intensity = 5.0;
   }
 });
 
@@ -539,119 +595,93 @@ fullscreenBtn.addEventListener('click', () => {
 });
 
 /* ============================================================
-   MULTI-PATH ROBUST GLTF LOADER
+   LOAD 3D GLTF MODEL & BUILD BVH COLLIDER
    ============================================================ */
 const gltfLoader = new GLTFLoader();
 
 function hideLoadingScreen() {
   progressBar.style.width = '100%';
   loadingPercent.textContent = '100%';
-  loadingStatus.textContent = 'Готово к просмотру!';
+  loadingStatus.textContent = 'Готово!';
 
   setTimeout(() => {
     loadingScreen.style.opacity = '0';
     setTimeout(() => {
       loadingScreen.classList.add('hidden');
-    }, 600);
-  }, 300);
+    }, 500);
+  }, 200);
 }
 
-// Candidates for GLB model URL
-const candidateUrls = [
-  './booth.glb',
-  'booth.glb',
-  '/scenengine/booth.glb',
-  './dist/booth.glb'
-];
+// Model URL
+const modelPath = './booth.glb';
+console.log(`[GLTF] Loading exhibition model from: ${modelPath}`);
+loadingStatus.textContent = 'Загрузка 3D-модели стенда...';
 
-let loadAttemptIndex = 0;
+gltfLoader.load(
+  modelPath,
+  (gltf) => {
+    console.log('[GLTF] Model successfully loaded!');
+    const model = gltf.scene;
+    scene.add(model);
 
-function tryLoadModel() {
-  if (loadAttemptIndex >= candidateUrls.length) {
-    console.warn('All candidate URLs exhausted. Proceeding with procedural stage fallback.');
-    hideLoadingScreen();
-    return;
-  }
+    model.traverse((child) => {
+      if (child.isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
 
-  const currentUrl = candidateUrls[loadAttemptIndex];
-  console.log(`[GLTF] Attempting to load model from: ${currentUrl}`);
-  loadingStatus.textContent = `Загрузка 3D-модели (${loadAttemptIndex + 1}/${candidateUrls.length})...`;
-
-  gltfLoader.load(
-    currentUrl,
-    (gltf) => {
-      console.log(`[GLTF] Successfully loaded model from ${currentUrl}`);
-      const model = gltf.scene;
-      scene.add(model);
-
-      const colliderMeshes = [];
-
-      model.traverse((child) => {
-        if (child.isMesh) {
-          child.castShadow = true;
-          child.receiveShadow = true;
-
-          if (child.material) {
-            child.material.roughness = Math.max(0.2, child.material.roughness || 0.4);
-            const matName = (child.material.name || '').toLowerCase();
-            const objName = (child.name || '').toLowerCase();
-            if (
-              matName.includes('led') || 
-              matName.includes('underglow') || 
-              objName.includes('led') || 
-              objName.includes('glow') ||
-              matName.includes('graphic') ||
-              objName.includes('graphic')
-            ) {
-              child.material.emissiveIntensity = 2.0;
-            }
+        if (child.material) {
+          child.material.roughness = Math.max(0.2, child.material.roughness || 0.4);
+          const matName = (child.material.name || '').toLowerCase();
+          const objName = (child.name || '').toLowerCase();
+          if (
+            matName.includes('led') || 
+            matName.includes('underglow') || 
+            objName.includes('led') || 
+            objName.includes('glow') ||
+            matName.includes('graphic') ||
+            objName.includes('graphic')
+          ) {
+            child.material.emissiveIntensity = 2.5;
           }
-          colliderMeshes.push(child);
         }
-      });
-
-      try {
-        if (colliderMeshes.length > 0) {
-          const staticGen = new StaticGeometryGenerator(colliderMeshes);
-          staticGen.attributes = ['position'];
-          const mergedGeometry = staticGen.generate();
-          mergedGeometry.computeBoundsTree();
-          
-          colliderMesh = new THREE.Mesh(mergedGeometry);
-          bvhCollider = mergedGeometry.boundsTree;
-          console.log('[BVH] Collision tree successfully built.');
-        }
-      } catch(err) {
-        console.warn('[BVH] Fallback collider notice:', err);
       }
+    });
 
-      hideLoadingScreen();
-    },
-    (xhr) => {
-      if (xhr.lengthComputable && xhr.total > 0) {
-        const percent = Math.min(99, Math.round((xhr.loaded / xhr.total) * 100));
-        progressBar.style.width = percent + '%';
-        loadingPercent.textContent = percent + '%';
-      }
-    },
-    (error) => {
-      console.warn(`[GLTF] Failed to load from ${currentUrl}:`, error);
-      loadAttemptIndex++;
-      tryLoadModel();
+    try {
+      const staticGen = new StaticGeometryGenerator(model);
+      staticGen.attributes = ['position'];
+      const mergedGeometry = staticGen.generate();
+      mergedGeometry.computeBoundsTree = computeBoundsTree;
+      mergedGeometry.disposeBoundsTree = disposeBoundsTree;
+      mergedGeometry.computeBoundsTree();
+      
+      colliderMesh = new THREE.Mesh(mergedGeometry);
+      bvhCollider = mergedGeometry.boundsTree;
+      console.log('[BVH] Collision tree successfully built.');
+    } catch(err) {
+      console.warn('[BVH] Collision tree notice:', err);
     }
-  );
-}
 
-// Start loading
-tryLoadModel();
-
-// Fail-safe: if network hangs for 8s, always dismiss loading overlay
-setTimeout(() => {
-  if (!loadingScreen.classList.contains('hidden')) {
-    console.log('[FailSafe] Dismissing loading screen.');
     hideLoadingScreen();
+  },
+  (xhr) => {
+    if (xhr.lengthComputable && xhr.total > 0) {
+      const percent = Math.min(99, Math.round((xhr.loaded / xhr.total) * 100));
+      progressBar.style.width = percent + '%';
+      loadingPercent.textContent = percent + '%';
+    }
+  },
+  (error) => {
+    console.error('[GLTF] Error loading model from primary path:', error);
+    // Fallback load
+    gltfLoader.load('/scenengine/booth.glb', (gltf2) => {
+      scene.add(gltf2.scene);
+      hideLoadingScreen();
+    }, null, () => {
+      hideLoadingScreen();
+    });
   }
-}, 8000);
+);
 
 /* ============================================================
    COLLISION & MOVEMENT UPDATE LOOP
@@ -659,15 +689,18 @@ setTimeout(() => {
 function updatePlayer(delta) {
   if (cameraMode !== 'fps' || isTeleporting) return;
 
-  let moveSpeed = keyStates.ShiftLeft || keyStates.ShiftRight ? 5.2 : 2.9;
+  const moveSpeed = keys.sprint ? 5.5 : 3.0;
 
-  const damping = Math.exp(-4 * delta) - 1;
+  // Damping
+  const damping = Math.exp(-6 * delta) - 1;
   playerVelocity.addScaledVector(playerVelocity, damping);
 
+  // Gravity
   if (!playerOnFloor) {
     playerVelocity.y -= GRAVITY * delta;
   }
 
+  // Direction vector from camera view
   playerDirection.set(0, 0, 0);
   const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
   forward.y = 0;
@@ -677,21 +710,21 @@ function updatePlayer(delta) {
   side.y = 0;
   side.normalize();
 
-  if (keyStates.KeyW || keyStates.ArrowUp) playerDirection.add(forward);
-  if (keyStates.KeyS || keyStates.ArrowDown) playerDirection.sub(forward);
-  if (keyStates.KeyD || keyStates.ArrowRight) playerDirection.add(side);
-  if (keyStates.KeyA || keyStates.ArrowLeft) playerDirection.sub(side);
+  if (keys.forward) playerDirection.add(forward);
+  if (keys.backward) playerDirection.sub(forward);
+  if (keys.right) playerDirection.add(side);
+  if (keys.left) playerDirection.sub(side);
 
   if (playerDirection.lengthSq() > 0.001) {
     playerDirection.normalize();
-    playerVelocity.addScaledVector(playerDirection, moveSpeed * delta * 20);
+    playerVelocity.addScaledVector(playerDirection, moveSpeed * delta * 25);
     
     if (playerOnFloor && Math.random() < 0.05) {
       sfx.playStep();
     }
   }
 
-  if (playerOnFloor && keyStates.Space) {
+  if (playerOnFloor && keys.jump) {
     playerVelocity.y = 7.5;
     playerOnFloor = false;
   }
@@ -699,6 +732,7 @@ function updatePlayer(delta) {
   const deltaVector = playerVelocity.clone().multiplyScalar(delta);
   playerCapsule.translate(deltaVector);
 
+  // BVH Collision Resolution
   playerOnFloor = false;
   if (colliderMesh && bvhCollider) {
     const tempBox = new THREE.Box3();
@@ -729,6 +763,7 @@ function updatePlayer(delta) {
     });
   }
 
+  // Ground plane limit
   if (playerCapsule.start.y < 0.35) {
     playerCapsule.start.y = 0.35;
     playerCapsule.end.y = 1.35;
@@ -736,10 +771,11 @@ function updatePlayer(delta) {
     playerOnFloor = true;
   }
 
-  playerCapsule.start.x = THREE.MathUtils.clamp(playerCapsule.start.x, -15, 15);
-  playerCapsule.end.x = THREE.MathUtils.clamp(playerCapsule.end.x, -15, 15);
-  playerCapsule.start.z = THREE.MathUtils.clamp(playerCapsule.start.z, -10, 15);
-  playerCapsule.end.z = THREE.MathUtils.clamp(playerCapsule.end.z, -10, 15);
+  // Pavilion boundaries
+  playerCapsule.start.x = THREE.MathUtils.clamp(playerCapsule.start.x, -25, 25);
+  playerCapsule.end.x = THREE.MathUtils.clamp(playerCapsule.end.x, -25, 25);
+  playerCapsule.start.z = THREE.MathUtils.clamp(playerCapsule.start.z, -15, 25);
+  playerCapsule.end.z = THREE.MathUtils.clamp(playerCapsule.end.z, -15, 25);
 
   camera.position.copy(playerCapsule.end).add(new THREE.Vector3(0, 0.25, 0));
 }
@@ -762,7 +798,7 @@ function updateHotspots() {
     const isBehind = screenPos.z > 1.0;
     const isOutOfView = Math.abs(screenPos.x) > 1.1 || Math.abs(screenPos.y) > 1.1;
 
-    if (isBehind || isOutOfView || dist > 12.0) {
+    if (isBehind || isOutOfView || dist > 15.0) {
       el.style.display = 'none';
     } else {
       el.style.display = 'flex';
@@ -771,11 +807,11 @@ function updateHotspots() {
       el.style.left = `${x}px`;
       el.style.top = `${y}px`;
 
-      const scale = THREE.MathUtils.clamp(1.0 - (dist - 1.5) * 0.08, 0.65, 1.1);
+      const scale = THREE.MathUtils.clamp(1.0 - (dist - 1.5) * 0.07, 0.65, 1.1);
       el.style.transform = `translate(-50%, -50%) scale(${scale})`;
 
       const distFromCenter = Math.hypot(screenPos.x, screenPos.y);
-      if (distFromCenter < 0.22 && dist < 5.0 && dist < closestDist) {
+      if (distFromCenter < 0.22 && dist < 6.0 && dist < closestDist) {
         closestDist = dist;
         hoveredHotspot = data;
       }
@@ -838,8 +874,8 @@ function animate() {
   updateHotspots();
 
   const time = clock.getElapsedTime();
-  spotLeft.position.y = 3.2 + Math.sin(time * 0.8) * 0.05;
-  spotRight.position.y = 3.2 + Math.cos(time * 0.8) * 0.05;
+  spotLeft.position.y = 3.5 + Math.sin(time * 0.8) * 0.05;
+  spotRight.position.y = 3.5 + Math.cos(time * 0.8) * 0.05;
 
   renderer.render(scene, camera);
 }
