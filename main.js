@@ -1,6 +1,5 @@
 ﻿import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { computeBoundsTree, disposeBoundsTree, acceleratedRaycast, MeshBVH, StaticGeometryGenerator } from 'three-mesh-bvh';
 import { Capsule } from 'three/examples/jsm/math/Capsule.js';
 
@@ -10,70 +9,6 @@ THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
 
 /* ============================================================
-   WEB AUDIO SOUND SYNTHESIS
-   ============================================================ */
-class SoundFX {
-  constructor() {
-    this.ctx = null;
-  }
-  init() {
-    if (!this.ctx) {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (AudioCtx) this.ctx = new AudioCtx();
-    }
-  }
-  playChirp() {
-    if (!this.ctx) return;
-    try {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(580, this.ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(880, this.ctx.currentTime + 0.1);
-      gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.1);
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.start();
-      osc.stop(this.ctx.currentTime + 0.1);
-    } catch(e) {}
-  }
-  playWhoosh() {
-    if (!this.ctx) return;
-    try {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(220, this.ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(440, this.ctx.currentTime + 0.25);
-      gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.25);
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.start();
-      osc.stop(this.ctx.currentTime + 0.25);
-    } catch(e) {}
-  }
-  playStep() {
-    if (!this.ctx) return;
-    try {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(90, this.ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.05);
-      gain.gain.setValueAtTime(0.04, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.05);
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.start();
-      osc.stop(this.ctx.currentTime + 0.05);
-    } catch(e) {}
-  }
-}
-const sfx = new SoundFX();
-
-/* ============================================================
    SCENE, CAMERA, RENDERER INITIALIZATION
    ============================================================ */
 const container = document.getElementById('canvas-container');
@@ -81,9 +16,8 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0e1422);
 scene.fog = new THREE.FogExp2(0x0e1422, 0.02);
 
+// Standard Human Eye Height = 1.6m
 const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.05, 100);
-camera.position.set(0, 1.7, 5.2);
-camera.lookAt(0, 1.1, -0.2);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -161,92 +95,12 @@ gridHelper.position.y = 0.001;
 scene.add(gridHelper);
 
 /* ============================================================
-   CONTROLS SETUP: FREE CURSOR MOUSE-LOOK & ORBIT CONTROLS
-   ============================================================ */
-let cameraMode = 'fps'; // 'fps' or 'orbit'
-
-// Orbit controls for inspection mode
-const orbitControls = new OrbitControls(camera, renderer.domElement);
-orbitControls.enableDamping = true;
-orbitControls.dampingFactor = 0.05;
-orbitControls.maxPolarAngle = Math.PI / 2 - 0.02;
-orbitControls.minDistance = 0.5;
-orbitControls.maxDistance = 25;
-orbitControls.enabled = false;
-
-// First-person mouse look with free cursor (drag to rotate)
-let isDraggingMouse = false;
-let mouseStartX = 0;
-let mouseStartY = 0;
-let cameraPitch = -0.08;
-let cameraYaw = 0;
-
-renderer.domElement.addEventListener('mousedown', (e) => {
-  if (cameraMode === 'fps') {
-    isDraggingMouse = true;
-    mouseStartX = e.clientX;
-    mouseStartY = e.clientY;
-  }
-});
-
-window.addEventListener('mouseup', () => {
-  isDraggingMouse = false;
-});
-
-window.addEventListener('mousemove', (e) => {
-  if (cameraMode === 'fps' && isDraggingMouse) {
-    const deltaX = e.clientX - mouseStartX;
-    const deltaY = e.clientY - mouseStartY;
-    mouseStartX = e.clientX;
-    mouseStartY = e.clientY;
-
-    cameraYaw -= deltaX * 0.0035;
-    cameraPitch -= deltaY * 0.0035;
-    cameraPitch = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, cameraPitch));
-
-    const euler = new THREE.Euler(cameraPitch, cameraYaw, 0, 'YXZ');
-    camera.quaternion.setFromEuler(euler);
-  }
-});
-
-// Touch controls for mobile
-let touchStartX = 0;
-let touchStartY = 0;
-renderer.domElement.addEventListener('touchstart', (e) => {
-  if (e.touches.length === 1 && cameraMode === 'fps') {
-    isDraggingMouse = true;
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
-  }
-}, { passive: true });
-
-renderer.domElement.addEventListener('touchmove', (e) => {
-  if (isDraggingMouse && e.touches.length === 1 && cameraMode === 'fps') {
-    const deltaX = e.touches[0].clientX - touchStartX;
-    const deltaY = e.touches[0].clientY - touchStartY;
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
-
-    cameraYaw -= deltaX * 0.004;
-    cameraPitch -= deltaY * 0.004;
-    cameraPitch = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, cameraPitch));
-
-    const euler = new THREE.Euler(cameraPitch, cameraYaw, 0, 'YXZ');
-    camera.quaternion.setFromEuler(euler);
-  }
-}, { passive: true });
-
-window.addEventListener('touchend', () => {
-  isDraggingMouse = false;
-});
-
-/* ============================================================
-   COLLISION PHYSICS ENGINE (three-mesh-bvh + Capsule)
+   FIRST-PERSON PLAYER & COLLISION ENGINE
    ============================================================ */
 const GRAVITY = 25;
 const playerCapsule = new Capsule(
-  new THREE.Vector3(0, 0.35, 5.2),
-  new THREE.Vector3(0, 1.35, 5.2),
+  new THREE.Vector3(0, 0.35, 5.0),
+  new THREE.Vector3(0, 1.35, 5.0),
   0.35
 );
 
@@ -256,6 +110,88 @@ let playerOnFloor = false;
 let colliderMesh = null;
 let bvhCollider = null;
 
+// Camera Orientation (Pitch / Yaw)
+let cameraPitch = -0.05;
+let cameraYaw = 0.0;
+
+function resetCamera() {
+  playerCapsule.start.set(0, 0.35, 5.0);
+  playerCapsule.end.set(0, 1.35, 5.0);
+  playerVelocity.set(0, 0, 0);
+  cameraPitch = -0.05;
+  cameraYaw = 0.0;
+  updateCameraRotation();
+  camera.position.set(0, 1.6, 5.0);
+}
+
+function updateCameraRotation() {
+  const euler = new THREE.Euler(cameraPitch, cameraYaw, 0, 'YXZ');
+  camera.quaternion.setFromEuler(euler);
+}
+
+resetCamera();
+
+// Free Mouse Drag Look (Left Click + Drag)
+let isDraggingMouse = false;
+let mouseStartX = 0;
+let mouseStartY = 0;
+
+renderer.domElement.addEventListener('mousedown', (e) => {
+  isDraggingMouse = true;
+  mouseStartX = e.clientX;
+  mouseStartY = e.clientY;
+});
+
+window.addEventListener('mouseup', () => {
+  isDraggingMouse = false;
+});
+
+window.addEventListener('mousemove', (e) => {
+  if (isDraggingMouse) {
+    const deltaX = e.clientX - mouseStartX;
+    const deltaY = e.clientY - mouseStartY;
+    mouseStartX = e.clientX;
+    mouseStartY = e.clientY;
+
+    cameraYaw -= deltaX * 0.0035;
+    cameraPitch -= deltaY * 0.0035;
+    cameraPitch = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, cameraPitch));
+
+    updateCameraRotation();
+  }
+});
+
+// Touch controls for mobile/tablet
+let touchStartX = 0;
+let touchStartY = 0;
+renderer.domElement.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 1) {
+    isDraggingMouse = true;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }
+}, { passive: true });
+
+renderer.domElement.addEventListener('touchmove', (e) => {
+  if (isDraggingMouse && e.touches.length === 1) {
+    const deltaX = e.touches[0].clientX - touchStartX;
+    const deltaY = e.touches[0].clientY - touchStartY;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+
+    cameraYaw -= deltaX * 0.004;
+    cameraPitch -= deltaY * 0.004;
+    cameraPitch = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, cameraPitch));
+
+    updateCameraRotation();
+  }
+}, { passive: true });
+
+window.addEventListener('touchend', () => {
+  isDraggingMouse = false;
+});
+
+// Keyboard Input (English + Russian layout + Arrow keys)
 const keys = {
   forward: false,
   backward: false,
@@ -265,7 +201,7 @@ const keys = {
   jump: false
 };
 
-function handleKeyDown(e) {
+window.addEventListener('keydown', (e) => {
   const code = e.code;
   const key = e.key ? e.key.toLowerCase() : '';
 
@@ -275,16 +211,9 @@ function handleKeyDown(e) {
   if (code === 'KeyD' || key === 'd' || key === 'в' || code === 'ArrowRight') keys.right = true;
   if (code === 'ShiftLeft' || code === 'ShiftRight' || e.shiftKey) keys.sprint = true;
   if (code === 'Space' || key === ' ') keys.jump = true;
+});
 
-  if (code === 'KeyE' || key === 'e' || key === 'у') {
-    handleInteractKey();
-  }
-  if (code === 'KeyC' || key === 'c' || key === 'с') {
-    toggleCameraMode();
-  }
-}
-
-function handleKeyUp(e) {
+window.addEventListener('keyup', (e) => {
   const code = e.code;
   const key = e.key ? e.key.toLowerCase() : '';
 
@@ -294,314 +223,34 @@ function handleKeyUp(e) {
   if (code === 'KeyD' || key === 'd' || key === 'в' || code === 'ArrowRight') keys.right = false;
   if (code === 'ShiftLeft' || code === 'ShiftRight' || !e.shiftKey) keys.sprint = false;
   if (code === 'Space' || key === ' ') keys.jump = false;
-}
-
-window.addEventListener('keydown', handleKeyDown);
-window.addEventListener('keyup', handleKeyUp);
-
-/* ============================================================
-   HOTSPOTS DATA & INTERACTIVE EXHIBIT SYSTEM
-   ============================================================ */
-const HOTSPOTS_DATA = [
-  {
-    id: 'exploded',
-    title: 'Взрыв-схема электродвигателя',
-    category: 'КОНСТРУКЦИЯ И КОМПОНЕНТЫ',
-    subtitle: 'Синхронная машина с постоянными магнитами (PMSM)',
-    worldPos: new THREE.Vector3(-1.0, 0.85, -0.29),
-    cameraPos: new THREE.Vector3(-1.0, 1.4, 1.4),
-    lookTarget: new THREE.Vector3(-1.0, 0.85, -0.29),
-    metrics: [
-      { val: '150 кВт', lbl: 'Пиковая мощность' },
-      { val: '320 Н·м', lbl: 'Макс. момент' },
-      { val: '97.8%', lbl: 'КПД системы' }
-    ],
-    desc: 'Детальная взрыв-схема демонстрирует послойную архитектуру тягового электродвигателя: ротор с неодимовыми магнитами высокой коэрцитивной силы, шихтованный статор с распределенной обмоткой, подшипниковые щиты и систему непосредственного жидкостного охлаждения.',
-    features: [
-      'Оптимизированное синусоидальное распределение магнитного потока',
-      'Защищенная герметичная рубашка охлаждения (IP67 / IP6K9K)',
-      'Интегрированные датчики положения ротора высокой точности (Resolver)'
-    ]
-  },
-  {
-    id: 'assembled',
-    title: 'Собранный тяговый электропривод',
-    category: 'ТЯГОВЫЙ СИЛОВОЙ МОДУЛЬ',
-    subtitle: 'Компактный агрегат 3-в-1 для легкового и коммерческого транспорта',
-    worldPos: new THREE.Vector3(1.55, 0.85, -0.29),
-    cameraPos: new THREE.Vector3(1.55, 1.4, 1.4),
-    lookTarget: new THREE.Vector3(1.55, 0.85, -0.29),
-    metrics: [
-      { val: '16 000', lbl: 'Об/мин макс.' },
-      { val: '78 кг', lbl: 'Сухая масса' },
-      { val: '100%', lbl: 'Локализация РФ' }
-    ],
-    desc: 'Готовый серийный электросиловой агрегат объединяет в едином алюминиевом картере электродвигатель, одноступенчатый редуктор с дифференциалом и систему термостатирования. Создан для российских электромобилей нового поколения.',
-    features: [
-      'Высокая удельная мощность свыше 2.2 кВт/кг',
-      'Низкий уровень шума и вибронагруженности (NVH стандарты)',
-      'Ресурс эксплуатации более 300 000 км пробега'
-    ]
-  },
-  {
-    id: 'inverter',
-    title: 'Силовой инвертор на карбиде кремния (SiC)',
-    category: 'СИЛОВАЯ ЭЛЕКТРОНИКА',
-    subtitle: 'Блок управления тяговым приводом высокой частоты',
-    worldPos: new THREE.Vector3(-1.28, 1.45, -0.72),
-    cameraPos: new THREE.Vector3(-1.28, 1.6, 0.8),
-    lookTarget: new THREE.Vector3(-1.28, 1.45, -0.72),
-    metrics: [
-      { val: '800 В', lbl: 'Напряжение сети' },
-      { val: '450 А', lbl: 'Макс. ток' },
-      { val: '99.2%', lbl: 'КПД инвертора' }
-    ],
-    desc: 'Инвертор на базе полупроводников SiC (карбид кремния) обеспечивает рекордный КПД и способность работать на высоких частотах коммутации (до 40 кГц), существенно снижая тепловые потери и габариты радиаторов.',
-    features: [
-      'Векторное управление с алгоритмами бездатчикового позиционирования',
-      'Аппаратная защита от перенапряжений и коротких замыканий',
-      'Поддержка стандартов AUTOSAR и шины CAN-FD'
-    ]
-  },
-  {
-    id: 'infoboard',
-    title: 'Информационный комплекс стенда',
-    category: 'ЭКОСИСТЕМА РОСАТОМ',
-    subtitle: 'Стратегия развития электрического движения в РФ',
-    worldPos: new THREE.Vector3(0.85, 1.6, -0.72),
-    cameraPos: new THREE.Vector3(0.85, 1.6, 1.2),
-    lookTarget: new THREE.Vector3(0.85, 1.5, -0.72),
-    metrics: [
-      { val: 'Гигафабрика', lbl: 'Калининград' },
-      { val: '4 ГВт·ч', lbl: 'Емкость/год' },
-      { val: 'Полный цикл', lbl: 'От ячейки до авто' }
-    ],
-    desc: 'Единая экосистема Росатома в сфере электротранспорта включает производство литий-ионных батарей на гигафабриках, разработку тяговых электродвигателей, зарядной инфраструктуры и систем управления движением.',
-    features: [
-      'Собственная сырьевая и технологическая независимость',
-      'Интеграция с крупнейшими автопроизводителями России',
-      'Зеленая чистая энергия на всех этапах жизненного цикла'
-    ]
-  },
-  {
-    id: 'gearbox',
-    title: 'Редукторная группа с дифференциалом',
-    category: 'МЕХАНИЧЕСКАЯ ТРАНСМИССИЯ',
-    subtitle: 'Интегрированный цилиндрический косозубый редуктор',
-    worldPos: new THREE.Vector3(-0.60, 0.85, -0.15),
-    cameraPos: new THREE.Vector3(-0.60, 1.3, 1.2),
-    lookTarget: new THREE.Vector3(-0.60, 0.85, -0.15),
-    metrics: [
-      { val: '9.2:1', lbl: 'Передаточное число' },
-      { val: '2800 Н·м', lbl: 'Момент на колесах' },
-      { val: '98.5%', lbl: 'Мех. КПД' }
-    ],
-    desc: 'Высокоточная косозубая передача с шлифованными зубьями снижает акустический шум на высоких оборотах. Встроенный дифференциал передает крутящий момент на приводные валы колес.',
-    features: [
-      'Высокая контактная прочность и износостойкость зубьев',
-      'Система принудительного разбрызгивания смазки',
-      'Интегрированный механизм парковочной блокировки (Park Lock)'
-    ]
-  }
-];
-
-const hotspotElements = [];
-HOTSPOTS_DATA.forEach(data => {
-  const el = document.createElement('div');
-  el.className = 'hotspot-marker';
-  el.innerHTML = `
-    <div class="hotspot-icon">⚡</div>
-    <div class="hotspot-label">${data.title}</div>
-  `;
-  el.addEventListener('click', (e) => {
-    e.stopPropagation();
-    openExhibitDrawer(data);
-  });
-  document.body.appendChild(el);
-  hotspotElements.push({ el, data });
 });
 
 /* ============================================================
-   UI & DOM CONTROLS
+   UI & BUTTON HANDLERS
    ============================================================ */
-const blocker = document.getElementById('blocker');
-const startBtn = document.getElementById('start-button');
 const loadingScreen = document.getElementById('loading-screen');
 const progressBar = document.getElementById('progress-bar');
 const loadingPercent = document.getElementById('loading-percent');
 const loadingStatus = document.getElementById('loading-status');
-const reticle = document.getElementById('reticle');
-const interactHint = document.getElementById('interact-hint');
-const interactText = document.getElementById('interact-text');
 const fpsCounter = document.getElementById('fps-counter');
+const resetCamBtn = document.getElementById('reset-cam-btn');
+const fullscreenBtn = document.getElementById('fullscreen-btn');
 
-const detailDrawer = document.getElementById('detail-drawer');
-const closeDrawerBtn = document.getElementById('close-drawer-btn');
-const drawerCategory = document.getElementById('drawer-category');
-const drawerTitle = document.getElementById('drawer-title');
-const drawerSubtitle = document.getElementById('drawer-subtitle');
-const drawerDesc = document.getElementById('drawer-description');
-const drawerFeatures = document.getElementById('drawer-features');
-const metric1Val = document.getElementById('metric-1-val');
-const metric1Lbl = document.getElementById('metric-1-lbl');
-const metric2Val = document.getElementById('metric-2-val');
-const metric2Lbl = document.getElementById('metric-2-lbl');
-const metric3Val = document.getElementById('metric-3-val');
-const metric3Lbl = document.getElementById('metric-3-lbl');
-const focusExhibitBtn = document.getElementById('focus-exhibit-btn');
-
-let activeHotspot = null;
-let currentFocusedExhibit = null;
-
-startBtn.addEventListener('click', () => {
-  sfx.init();
-  sfx.playWhoosh();
-  blocker.classList.add('hidden');
-});
-
-closeDrawerBtn.addEventListener('click', () => {
-  detailDrawer.classList.add('hidden');
-});
-
-focusExhibitBtn.addEventListener('click', () => {
-  if (currentFocusedExhibit) {
-    smoothTeleport(currentFocusedExhibit.cameraPos, currentFocusedExhibit.lookTarget);
-    detailDrawer.classList.add('hidden');
-  }
-});
-
-function openExhibitDrawer(data) {
-  currentFocusedExhibit = data;
-  sfx.playChirp();
-  
-  drawerCategory.textContent = data.category;
-  drawerTitle.textContent = data.title;
-  drawerSubtitle.textContent = data.subtitle;
-  drawerDesc.textContent = data.desc;
-  
-  if (data.metrics && data.metrics.length >= 3) {
-    metric1Val.textContent = data.metrics[0].val;
-    metric1Lbl.textContent = data.metrics[0].lbl;
-    metric2Val.textContent = data.metrics[1].val;
-    metric2Lbl.textContent = data.metrics[1].lbl;
-    metric3Val.textContent = data.metrics[2].val;
-    metric3Lbl.textContent = data.metrics[2].lbl;
-  }
-  
-  drawerFeatures.innerHTML = data.features.map(f => `<li>${f}</li>`).join('');
-  detailDrawer.classList.remove('hidden');
+if (resetCamBtn) {
+  resetCamBtn.addEventListener('click', () => {
+    resetCamera();
+  });
 }
 
-function handleInteractKey() {
-  if (activeHotspot) {
-    openExhibitDrawer(activeHotspot);
-  }
-}
-
-// Teleport Chips Navigation
-const navChips = document.querySelectorAll('.nav-chip');
-const TELEPORT_POINTS = {
-  overview: { pos: new THREE.Vector3(0, 1.7, 5.2), look: new THREE.Vector3(0, 1.1, -0.2) },
-  exploded: { pos: new THREE.Vector3(-1.0, 1.4, 1.4), look: new THREE.Vector3(-1.0, 0.85, -0.29) },
-  assembled: { pos: new THREE.Vector3(1.55, 1.4, 1.4), look: new THREE.Vector3(1.55, 0.85, -0.29) },
-  inverter: { pos: new THREE.Vector3(-1.28, 1.6, 0.8), look: new THREE.Vector3(-1.28, 1.45, -0.72) },
-  infoboard: { pos: new THREE.Vector3(0.85, 1.6, 1.2), look: new THREE.Vector3(0.85, 1.5, -0.72) }
-};
-
-navChips.forEach(chip => {
-  chip.addEventListener('click', () => {
-    navChips.forEach(c => c.classList.remove('active'));
-    chip.classList.add('active');
-    const pointKey = chip.dataset.point;
-    if (TELEPORT_POINTS[pointKey]) {
-      const p = TELEPORT_POINTS[pointKey];
-      smoothTeleport(p.pos, p.look);
+if (fullscreenBtn) {
+  fullscreenBtn.addEventListener('click', () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
     }
   });
-});
-
-let isTeleporting = false;
-let teleportStartPos = new THREE.Vector3();
-let teleportTargetPos = new THREE.Vector3();
-let teleportStartLook = new THREE.Vector3();
-let teleportTargetLook = new THREE.Vector3();
-let teleportProgress = 0;
-
-function smoothTeleport(targetPos, targetLook) {
-  sfx.playWhoosh();
-  isTeleporting = true;
-  teleportProgress = 0;
-  teleportStartPos.copy(camera.position);
-  teleportTargetPos.copy(targetPos);
-  
-  playerCapsule.start.set(targetPos.x, 0.35, targetPos.z);
-  playerCapsule.end.set(targetPos.x, 1.35, targetPos.z);
-  playerVelocity.set(0, 0, 0);
-
-  const lookVec = new THREE.Vector3();
-  camera.getWorldDirection(lookVec);
-  teleportStartLook.copy(camera.position).add(lookVec);
-  teleportTargetLook.copy(targetLook || targetPos);
 }
-
-const cameraModeBtn = document.getElementById('camera-mode-btn');
-cameraModeBtn.addEventListener('click', toggleCameraMode);
-
-function toggleCameraMode() {
-  if (cameraMode === 'fps') {
-    cameraMode = 'orbit';
-    cameraModeBtn.innerHTML = '<span class="btn-emoji">🪐</span> <span class="btn-label">Орбита</span>';
-    orbitControls.enabled = true;
-    orbitControls.target.set(0, 1.0, -0.2);
-    reticle.classList.add('hidden');
-    blocker.classList.add('hidden');
-  } else {
-    cameraMode = 'fps';
-    cameraModeBtn.innerHTML = '<span class="btn-emoji">🚶</span> <span class="btn-label">1-е лицо</span>';
-    orbitControls.enabled = false;
-    reticle.classList.remove('hidden');
-  }
-}
-
-let isShowcaseNight = false;
-const lightingModeBtn = document.getElementById('lighting-mode-btn');
-lightingModeBtn.addEventListener('click', () => {
-  isShowcaseNight = !isShowcaseNight;
-  sfx.playChirp();
-  if (isShowcaseNight) {
-    scene.background.set(0x060810);
-    scene.fog.color.set(0x060810);
-    ambientLight.intensity = 0.5;
-    keyLight.intensity = 1.2;
-    fillLight.intensity = 0.7;
-    spotLeft.intensity = 12.0;
-    spotRight.intensity = 12.0;
-    spotLogo.intensity = 8.0;
-  } else {
-    scene.background.set(0x0e1422);
-    scene.fog.color.set(0x0e1422);
-    ambientLight.intensity = 1.4;
-    keyLight.intensity = 2.8;
-    fillLight.intensity = 1.8;
-    spotLeft.intensity = 8.0;
-    spotRight.intensity = 8.0;
-    spotLogo.intensity = 6.0;
-  }
-});
-
-const fullscreenBtn = document.getElementById('fullscreen-btn');
-fullscreenBtn.addEventListener('click', () => {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen().catch(() => {});
-  } else {
-    document.exitFullscreen().catch(() => {});
-  }
-});
-
-/* ============================================================
-   LOAD 3D GLTF MODEL & BUILD BVH COLLIDER
-   ============================================================ */
-const gltfLoader = new GLTFLoader();
 
 function hideLoadingScreen() {
   progressBar.style.width = '100%';
@@ -612,14 +261,16 @@ function hideLoadingScreen() {
     loadingScreen.style.opacity = '0';
     setTimeout(() => {
       loadingScreen.classList.add('hidden');
-      blocker.classList.add('hidden'); // Automatically reveal the interactive scene!
     }, 400);
   }, 200);
 }
 
+/* ============================================================
+   LOAD 3D GLTF MODEL & BUILD BVH COLLIDER
+   ============================================================ */
+const gltfLoader = new GLTFLoader();
 const modelPath = './booth.glb';
 console.log(`[GLTF] Loading exhibition model from: ${modelPath}`);
-loadingStatus.textContent = 'Загрузка 3D-модели стенда...';
 
 gltfLoader.load(
   modelPath,
@@ -634,7 +285,7 @@ gltfLoader.load(
         child.receiveShadow = true;
 
         if (child.material) {
-          child.material.side = THREE.DoubleSide; // Render both sides of geometry
+          child.material.side = THREE.DoubleSide;
           child.material.roughness = Math.max(0.15, child.material.roughness || 0.35);
           const matName = (child.material.name || '').toLowerCase();
           const objName = (child.name || '').toLowerCase();
@@ -691,17 +342,18 @@ gltfLoader.load(
    COLLISION & MOVEMENT UPDATE LOOP
    ============================================================ */
 function updatePlayer(delta) {
-  if (cameraMode !== 'fps' || isTeleporting) return;
-
   const moveSpeed = keys.sprint ? 5.5 : 3.2;
 
-  const damping = Math.exp(-6 * delta) - 1;
+  // Damping
+  const damping = Math.exp(-7 * delta) - 1;
   playerVelocity.addScaledVector(playerVelocity, damping);
 
+  // Gravity
   if (!playerOnFloor) {
     playerVelocity.y -= GRAVITY * delta;
   }
 
+  // Direction vector from camera view
   playerDirection.set(0, 0, 0);
   const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
   forward.y = 0;
@@ -719,10 +371,6 @@ function updatePlayer(delta) {
   if (playerDirection.lengthSq() > 0.001) {
     playerDirection.normalize();
     playerVelocity.addScaledVector(playerDirection, moveSpeed * delta * 25);
-    
-    if (playerOnFloor && Math.random() < 0.05) {
-      sfx.playStep();
-    }
   }
 
   if (playerOnFloor && keys.jump) {
@@ -733,6 +381,7 @@ function updatePlayer(delta) {
   const deltaVector = playerVelocity.clone().multiplyScalar(delta);
   playerCapsule.translate(deltaVector);
 
+  // BVH Collision Resolution against stand
   playerOnFloor = false;
   if (colliderMesh && bvhCollider) {
     const tempBox = new THREE.Box3();
@@ -777,56 +426,7 @@ function updatePlayer(delta) {
   playerCapsule.start.z = THREE.MathUtils.clamp(playerCapsule.start.z, -15, 25);
   playerCapsule.end.z = THREE.MathUtils.clamp(playerCapsule.end.z, -15, 25);
 
-  camera.position.copy(playerCapsule.end).add(new THREE.Vector3(0, 0.35, 0));
-}
-
-/* ============================================================
-   HOTSPOT PROJECTION & INTERACTION RAYCASTING
-   ============================================================ */
-const screenPos = new THREE.Vector3();
-
-function updateHotspots() {
-  let closestDist = Infinity;
-  let hoveredHotspot = null;
-
-  hotspotElements.forEach(({ el, data }) => {
-    screenPos.copy(data.worldPos);
-    
-    const dist = camera.position.distanceTo(data.worldPos);
-    screenPos.project(camera);
-
-    const isBehind = screenPos.z > 1.0;
-    const isOutOfView = Math.abs(screenPos.x) > 1.1 || Math.abs(screenPos.y) > 1.1;
-
-    if (isBehind || isOutOfView || dist > 15.0) {
-      el.style.display = 'none';
-    } else {
-      el.style.display = 'flex';
-      const x = (screenPos.x * 0.5 + 0.5) * window.innerWidth;
-      const y = (-(screenPos.y * 0.5) + 0.5) * window.innerHeight;
-      el.style.left = `${x}px`;
-      el.style.top = `${y}px`;
-
-      const scale = THREE.MathUtils.clamp(1.0 - (dist - 1.5) * 0.07, 0.65, 1.1);
-      el.style.transform = `translate(-50%, -50%) scale(${scale})`;
-
-      const distFromCenter = Math.hypot(screenPos.x, screenPos.y);
-      if (distFromCenter < 0.22 && dist < 6.0 && dist < closestDist) {
-        closestDist = dist;
-        hoveredHotspot = data;
-      }
-    }
-  });
-
-  activeHotspot = hoveredHotspot;
-  if (activeHotspot) {
-    reticle.classList.add('active');
-    interactHint.classList.remove('hidden');
-    interactText.textContent = activeHotspot.title;
-  } else {
-    reticle.classList.remove('active');
-    interactHint.classList.add('hidden');
-  }
+  camera.position.copy(playerCapsule.end).add(new THREE.Vector3(0, 0.25, 0));
 }
 
 /* ============================================================
@@ -844,34 +444,12 @@ function animate() {
 
   frameCount++;
   if (now - lastFpsTime >= 1000) {
-    fpsCounter.textContent = `${frameCount} FPS`;
+    if (fpsCounter) fpsCounter.textContent = `${frameCount} FPS`;
     frameCount = 0;
     lastFpsTime = now;
   }
 
-  if (isTeleporting) {
-    teleportProgress += delta * 2.2;
-    const t = THREE.MathUtils.smoothstep(teleportProgress, 0, 1);
-    camera.position.lerpVectors(teleportStartPos, teleportTargetPos, t);
-    
-    const currentLook = new THREE.Vector3().lerpVectors(teleportStartLook, teleportTargetLook, t);
-    camera.lookAt(currentLook);
-
-    if (teleportProgress >= 1) {
-      isTeleporting = false;
-      camera.position.copy(teleportTargetPos);
-      if (cameraMode === 'orbit') {
-        orbitControls.target.copy(teleportTargetLook);
-      }
-    }
-  } else {
-    updatePlayer(delta);
-    if (cameraMode === 'orbit') {
-      orbitControls.update();
-    }
-  }
-
-  updateHotspots();
+  updatePlayer(delta);
 
   const time = clock.getElapsedTime();
   spotLeft.position.y = 3.5 + Math.sin(time * 0.8) * 0.05;
