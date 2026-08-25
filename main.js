@@ -7,14 +7,14 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 const container = document.getElementById('canvas-container');
 const scene = new THREE.Scene();
 
-// Studio neutral gray background matching cycles_render.png
-const STUDIO_BG_COLOR = 0x9398a0;
-const STUDIO_FLOOR_COLOR = 0xa4a9b2;
+// Exact studio neutral gray background from Blender Cycles viewport
+const STUDIO_BG_COLOR = 0x888d94;
+const STUDIO_FLOOR_COLOR = 0x9ea3ab;
 
 scene.background = new THREE.Color(STUDIO_BG_COLOR);
-scene.fog = new THREE.FogExp2(STUDIO_BG_COLOR, 0.015);
+scene.fog = new THREE.FogExp2(STUDIO_BG_COLOR, 0.012);
 
-// Human Eye Height = 1.6m, natural architectural perspective FOV 48
+// Standard Human Eye Height = 1.6m, architectural FOV 48
 const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.05, 100);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -23,78 +23,83 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05; // Balanced exposure matching Cycles render
+renderer.toneMappingExposure = 1.0;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 container.appendChild(renderer.domElement);
 
 /* ============================================================
-   STUDIO CYCLORAMA FLOOR & BALANCED LIGHTING (CYCLES MATCH)
+   STUDIO LIGHTING SETUP (MATCHING BLENDER 2-SOFTBOX SETUP)
    ============================================================ */
-// Smooth studio floor
-const studioFloorGeo = new THREE.PlaneGeometry(60, 60);
+// Soft ambient illumination
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+scene.add(ambientLight);
+
+// Left Studio Softbox (Large Area Light match)
+const leftSoftbox = new THREE.DirectionalLight(0xfffaee, 1.4);
+leftSoftbox.position.set(-5.5, 5.5, 4.5);
+leftSoftbox.castShadow = true;
+leftSoftbox.shadow.mapSize.width = 2048;
+leftSoftbox.shadow.mapSize.height = 2048;
+leftSoftbox.shadow.camera.near = 0.5;
+leftSoftbox.shadow.camera.far = 25;
+leftSoftbox.shadow.camera.left = -6;
+leftSoftbox.shadow.camera.right = 6;
+leftSoftbox.shadow.camera.top = 6;
+leftSoftbox.shadow.camera.bottom = -4;
+leftSoftbox.shadow.bias = -0.0001;
+leftSoftbox.shadow.normalBias = 0.02;
+leftSoftbox.shadow.radius = 3.0; // Soft studio shadow edges
+scene.add(leftSoftbox);
+
+// Right Studio Softbox (Large Area Light match)
+const rightSoftbox = new THREE.DirectionalLight(0xf0f5ff, 1.4);
+rightSoftbox.position.set(5.5, 5.5, 4.5);
+rightSoftbox.castShadow = true;
+rightSoftbox.shadow.mapSize.width = 2048;
+rightSoftbox.shadow.mapSize.height = 2048;
+rightSoftbox.shadow.camera.near = 0.5;
+rightSoftbox.shadow.camera.far = 25;
+rightSoftbox.shadow.camera.left = -6;
+rightSoftbox.shadow.camera.right = 6;
+rightSoftbox.shadow.camera.top = 6;
+rightSoftbox.shadow.camera.bottom = -4;
+rightSoftbox.shadow.bias = -0.0001;
+rightSoftbox.shadow.normalBias = 0.02;
+rightSoftbox.shadow.radius = 3.0;
+scene.add(rightSoftbox);
+
+// Front Fill Light
+const frontLight = new THREE.DirectionalLight(0xffffff, 0.7);
+frontLight.position.set(0, 5.0, 6.0);
+scene.add(frontLight);
+
+// Top/Back Rim Light
+const rimLight = new THREE.DirectionalLight(0xffffff, 0.5);
+rimLight.position.set(0, 7.0, -3.0);
+scene.add(rimLight);
+
+// 7 Top Conical Spotlights on Truss Beam
+const spotPositions = [-1.8, -1.2, -0.6, 0.0, 0.6, 1.2, 1.8];
+spotPositions.forEach((x) => {
+  const spot = new THREE.SpotLight(0xffffff, 2.4, 7.0, Math.PI / 4, 0.55, 1.2);
+  spot.position.set(x, 2.9, 0.35);
+  spot.target.position.set(x, 0.85, -0.29);
+  scene.add(spot);
+  scene.add(spot.target);
+});
+
+// Smooth studio showroom floor (NO GRID)
+const studioFloorGeo = new THREE.PlaneGeometry(80, 80, 1, 1);
 const studioFloorMat = new THREE.MeshStandardMaterial({
   color: STUDIO_FLOOR_COLOR,
-  roughness: 0.38,
-  metalness: 0.08,
+  roughness: 0.35,
+  metalness: 0.12,
 });
 const studioFloor = new THREE.Mesh(studioFloorGeo, studioFloorMat);
 studioFloor.rotation.x = -Math.PI / 2;
 studioFloor.position.y = -0.001;
 studioFloor.receiveShadow = true;
 scene.add(studioFloor);
-
-// Studio cyclorama back wall
-const studioWallGeo = new THREE.PlaneGeometry(60, 30);
-const studioWallMat = new THREE.MeshStandardMaterial({
-  color: STUDIO_BG_COLOR,
-  roughness: 0.65,
-  metalness: 0.02,
-});
-const studioWall = new THREE.Mesh(studioWallGeo, studioWallMat);
-studioWall.position.set(0, 10, -5.0);
-studioWall.receiveShadow = true;
-scene.add(studioWall);
-
-// Ambient Studio Light
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
-scene.add(ambientLight);
-
-// Primary Key Light (Front-Top-Right, soft studio warmth)
-const keyLight = new THREE.DirectionalLight(0xfffbf2, 1.4);
-keyLight.position.set(3.5, 7.5, 6.0);
-keyLight.castShadow = true;
-keyLight.shadow.mapSize.width = 2048;
-keyLight.shadow.mapSize.height = 2048;
-keyLight.shadow.camera.near = 0.5;
-keyLight.shadow.camera.far = 25;
-keyLight.shadow.camera.left = -5.5;
-keyLight.shadow.camera.right = 5.5;
-keyLight.shadow.camera.top = 5.5;
-keyLight.shadow.camera.bottom = -3.5;
-keyLight.shadow.bias = -0.0001;
-keyLight.shadow.normalBias = 0.02;
-keyLight.shadow.radius = 2.5;
-scene.add(keyLight);
-
-// Soft Fill Light (Front-Top-Left)
-const fillLight = new THREE.DirectionalLight(0xedf4ff, 0.9);
-fillLight.position.set(-4.5, 6.5, 5.0);
-scene.add(fillLight);
-
-// Back Rim Light (Behind Stand)
-const rimLight = new THREE.DirectionalLight(0xffffff, 0.6);
-rimLight.position.set(0, 6.0, -3.0);
-scene.add(rimLight);
-
-// 7 Truss Spotlights illuminating components along the beam
-const spotPositions = [-1.8, -1.2, -0.6, 0.0, 0.6, 1.2, 1.8];
-spotPositions.forEach((x) => {
-  const spot = new THREE.SpotLight(0xffffff, 2.2, 7.0, Math.PI / 4, 0.55, 1.2);
-  spot.position.set(x, 2.9, 0.35);
-  spot.target.position.set(x, 0.85, -0.29);
-  scene.add(spot);
-  scene.add(spot.target);
-});
 
 /* ============================================================
    FIRST-PERSON CONTROLLER & STRICT VISITOR BOUNDS

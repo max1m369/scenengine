@@ -7,9 +7,9 @@ export default defineConfig({
     chunkSizeWarningLimit: 3000,
     rollupOptions: {
       output: {
-        entryFileNames: 'bundle.js',
-        chunkFileNames: 'bundle-[name].js',
-        assetFileNames: 'bundle.[ext]'
+        entryFileNames: 'assets/app-[hash].js',
+        chunkFileNames: 'assets/chunk-[hash].js',
+        assetFileNames: 'assets/style-[hash].[ext]'
       }
     }
   }
