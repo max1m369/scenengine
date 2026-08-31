@@ -1,5 +1,7 @@
-﻿import * as THREE from 'three';
+import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+
+// Build: 2026-08-31T22:57 (Updated Right Podium)
 
 /* ============================================================
    SCENE, CAMERA, RENDERER INITIALIZATION
