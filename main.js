@@ -1,4 +1,4 @@
-﻿import * as THREE from 'three';
+import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 /* ============================================================
@@ -316,6 +316,22 @@ function tryLoad() {
       console.log('[GLTF] Model successfully loaded!');
       const model = gltf.scene;
       scene.add(model);
+
+      // Normalize model dimensions: scale to architectural 6.5m width and center at (0,0,0)
+      const rawBox = new THREE.Box3().setFromObject(model);
+      const rawSize = rawBox.getSize(new THREE.Vector3());
+
+      if (rawSize.x > 20) {
+        const scaleFactor = 6.5 / rawSize.x;
+        model.scale.set(scaleFactor, scaleFactor, scaleFactor);
+      }
+
+      const box = new THREE.Box3().setFromObject(model);
+      const center = box.getCenter(new THREE.Vector3());
+
+      model.position.x = -center.x;
+      model.position.y = -box.min.y;
+      model.position.z = -center.z;
 
       model.traverse((child) => {
         if (child.isMesh) {
