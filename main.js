@@ -1,7 +1,5 @@
-import * as THREE from 'three';
+﻿import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-
-// Build: 2026-08-31T22:57 (Updated Right Podium)
 
 /* ============================================================
    SCENE, CAMERA, RENDERER INITIALIZATION
@@ -16,8 +14,8 @@ const STUDIO_FLOOR_COLOR = 0x9ea3ab;
 scene.background = new THREE.Color(STUDIO_BG_COLOR);
 scene.fog = new THREE.FogExp2(STUDIO_BG_COLOR, 0.012);
 
-// Standard Human Eye Height = 1.6m, architectural FOV 48
-const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.05, 100);
+// Wide natural human perspective (FOV 60) for panoramic view of whole booth
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.05, 100);
 
 const renderer = new THREE.WebGLRenderer({
   antialias: true,
@@ -25,14 +23,14 @@ const renderer = new THREE.WebGLRenderer({
 });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-renderer.shadowMap.enabled = false; // Disabled dynamic shadow pass for instant 60-120+ FPS
+renderer.shadowMap.enabled = false; // Zero shadow pass overhead = rock-solid 60-120+ FPS
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.0;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 container.appendChild(renderer.domElement);
 
 /* ============================================================
-   STUDIO LIGHTING SETUP (PRECISE, CRISP, HIGH-FPS)
+   STUDIO LIGHTING SETUP (CRISP PBR ILLUMINATION)
    ============================================================ */
 // Soft ambient illumination
 const ambientLight = new THREE.AmbientLight(0xffffff, 1.05);
@@ -76,21 +74,21 @@ studioFloor.position.y = -0.001;
 scene.add(studioFloor);
 
 /* ============================================================
-   FIRST-PERSON CONTROLLER & STRICT VISITOR BOUNDS
+   FIRST-PERSON CONTROLLER & PANORAMIC INITIAL SPAWN
    ============================================================ */
 const player = {
-  pos: new THREE.Vector3(0, 1.55, 4.3),
+  pos: new THREE.Vector3(0, 1.60, 5.2),
   velocity: new THREE.Vector3(0, 0, 0),
-  pitch: -0.03,
+  pitch: -0.02,
   yaw: 0.0,
   radius: 0.35,
-  height: 1.55,
+  height: 1.60,
   onGround: true
 };
 
 function updateCamera() {
   if (isNaN(player.pos.x) || isNaN(player.pos.y) || isNaN(player.pos.z)) {
-    player.pos.set(0, 1.55, 4.3);
+    player.pos.set(0, 1.60, 5.2);
   }
   if (isNaN(player.pitch)) player.pitch = 0;
   if (isNaN(player.yaw)) player.yaw = 0;
@@ -101,9 +99,9 @@ function updateCamera() {
 }
 
 function resetPlayerView() {
-  player.pos.set(0, 1.55, 4.3);
+  player.pos.set(0, 1.60, 5.2);
   player.velocity.set(0, 0, 0);
-  player.pitch = -0.03;
+  player.pitch = -0.02;
   player.yaw = 0.0;
   updateCamera();
 }
@@ -328,8 +326,24 @@ function tryLoad() {
           if (child.material) {
             const matName = (child.material.name || '').toLowerCase();
             const objName = (child.name || '').toLowerCase();
-            const isThinGraphic = !!child.material.map || objName.includes('graphic') || objName.includes('print') || objName.includes('canvas') || objName.includes('logo') || objName.includes('slogan') || objName.includes('plate') || objName.includes('plaque');
-            child.material.side = isThinGraphic ? THREE.DoubleSide : THREE.FrontSide;
+            
+            const isGlass = matName.includes('supportglass') || matName.includes('glass');
+            const isGraphic = matName.includes('print') || matName.includes('logo') || matName.includes('canvas') || matName.includes('boardgraphic');
+
+            if (isGlass) {
+              child.material.transparent = true;
+              child.material.opacity = 0.35;
+              child.material.depthWrite = false;
+            } else if (isGraphic) {
+              child.material.transparent = true;
+              child.material.depthWrite = true;
+              child.material.side = THREE.DoubleSide;
+            } else {
+              // Crucial for 60-120+ FPS: disable depth sorting on all solid engine meshes
+              child.material.transparent = false;
+              child.material.depthWrite = true;
+              child.material.side = THREE.FrontSide;
+            }
 
             // PBR adjustments strictly matching cycles_render.png
             if (!child.material.map) {
@@ -357,12 +371,7 @@ function tryLoad() {
               }
             }
 
-            if (matName.includes('supportglass')) {
-              child.material.transparent = true;
-              child.material.opacity = 0.35;
-              child.material.roughness = 0.05;
-              child.material.metalness = 0.1;
-            } else if (matName.includes('glowwhite') || objName.includes('led_strip')) {
+            if (matName.includes('glowwhite') || objName.includes('led_strip')) {
               child.material.emissive = new THREE.Color(0xffffff);
               child.material.emissiveIntensity = 2.0;
             } else if (matName.includes('glowblue') || objName.includes('underglow')) {
@@ -383,7 +392,7 @@ function tryLoad() {
       } else if (xhr.loaded > 0) {
         const mb = (xhr.loaded / (1024 * 1024)).toFixed(1);
         if (loadingStatus) loadingStatus.textContent = `⚡ Загрузка: ${mb} МБ...`;
-        if (progressBar) progressBar.style.width = Math.min(95, Math.round((xhr.loaded / 10474152) * 100)) + '%';
+        if (progressBar) progressBar.style.width = Math.min(95, Math.round((xhr.loaded / 10698916) * 100)) + '%';
       }
     },
     (error) => {
@@ -436,17 +445,17 @@ function updatePlayerPhysics(delta) {
   player.pos.y += player.velocity.y * delta;
   player.pos.z += player.velocity.z * delta;
 
-  if (player.pos.y <= 1.55) {
-    player.pos.y = 1.55;
+  if (player.pos.y <= 1.60) {
+    player.pos.y = 1.60;
     player.velocity.y = 0;
     player.onGround = true;
   }
 
   resolveCollisions(player.pos, player.radius);
 
-  // STRICT VISITOR BOUNDS: No walking off into void or behind wall
-  player.pos.x = THREE.MathUtils.clamp(player.pos.x, -3.8, 3.8); // Left/right perimeter
-  player.pos.z = THREE.MathUtils.clamp(player.pos.z, 0.8, 5.8);  // In front of stand only
+  // STRICT VISITOR BOUNDS: Natural wide viewing corridor in front of stand
+  player.pos.x = THREE.MathUtils.clamp(player.pos.x, -4.5, 4.5); // Left/right perimeter
+  player.pos.z = THREE.MathUtils.clamp(player.pos.z, 1.0, 7.5);  // In front of stand only
 
   updateCamera();
 }
