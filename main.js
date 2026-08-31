@@ -22,16 +22,18 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.autoUpdate = false;
+renderer.shadowMap.needsUpdate = true;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.0;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 container.appendChild(renderer.domElement);
 
 /* ============================================================
-   STUDIO LIGHTING SETUP (OPTIMIZED BLENDER 2-SOFTBOX SETUP)
+   STUDIO LIGHTING SETUP (ULTRA-HIGH PERFORMANCE STUDIO SETUP)
    ============================================================ */
 // Soft ambient illumination
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.95);
 scene.add(ambientLight);
 
 // Left Studio Softbox (Primary Key Shadow Light)
@@ -67,15 +69,12 @@ const rimLight = new THREE.DirectionalLight(0xffffff, 0.5);
 rimLight.position.set(0, 7.0, -3.0);
 scene.add(rimLight);
 
-// 7 Top Conical Spotlights on Truss Beam
-const spotPositions = [-1.8, -1.2, -0.6, 0.0, 0.6, 1.2, 1.8];
-spotPositions.forEach((x) => {
-  const spot = new THREE.SpotLight(0xffffff, 2.4, 7.0, Math.PI / 4, 0.55, 1.2);
-  spot.position.set(x, 2.9, 0.35);
-  spot.target.position.set(x, 0.85, -0.29);
-  scene.add(spot);
-  scene.add(spot.target);
-});
+// Top Downlight on Truss Beam (High-efficiency directional beam)
+const trussLight = new THREE.DirectionalLight(0xffffff, 1.2);
+trussLight.position.set(0, 4.0, 0.5);
+trussLight.target.position.set(0, 0.8, -0.3);
+scene.add(trussLight);
+scene.add(trussLight.target);
 
 // Smooth studio showroom floor (NO GRID)
 const studioFloorGeo = new THREE.PlaneGeometry(80, 80, 1, 1);
@@ -149,8 +148,8 @@ window.addEventListener('mouseup', () => {
 
 window.addEventListener('mousemove', (e) => {
   if (isPointerLocked) {
-    player.targetYaw -= e.movementX * 0.0016;
-    player.targetPitch -= e.movementY * 0.0016;
+    player.targetYaw += e.movementX * 0.0016;
+    player.targetPitch += e.movementY * 0.0016;
     player.targetPitch = Math.max(-Math.PI / 2 + 0.08, Math.min(Math.PI / 2 - 0.08, player.targetPitch));
   } else if (isDragging) {
     const deltaX = e.clientX - mouseStartX;
@@ -158,8 +157,8 @@ window.addEventListener('mousemove', (e) => {
     mouseStartX = e.clientX;
     mouseStartY = e.clientY;
 
-    player.targetYaw -= deltaX * 0.0020;
-    player.targetPitch -= deltaY * 0.0020;
+    player.targetYaw += deltaX * 0.0022;
+    player.targetPitch += deltaY * 0.0022;
     player.targetPitch = Math.max(-Math.PI / 2 + 0.08, Math.min(Math.PI / 2 - 0.08, player.targetPitch));
   }
 });
@@ -190,8 +189,8 @@ renderer.domElement.addEventListener('touchmove', (e) => {
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
 
-    player.targetYaw -= deltaX * 0.0022;
-    player.targetPitch -= deltaY * 0.0022;
+    player.targetYaw += deltaX * 0.0024;
+    player.targetPitch += deltaY * 0.0024;
     player.targetPitch = Math.max(-Math.PI / 2 + 0.08, Math.min(Math.PI / 2 - 0.08, player.targetPitch));
   }
 }, { passive: true });
@@ -393,6 +392,7 @@ function tryLoad() {
         }
       });
 
+      renderer.shadowMap.needsUpdate = true;
       hideLoadingBar();
     },
     (xhr) => {
