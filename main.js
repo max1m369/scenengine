@@ -19,7 +19,7 @@ const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerH
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -28,44 +28,33 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 container.appendChild(renderer.domElement);
 
 /* ============================================================
-   STUDIO LIGHTING SETUP (MATCHING BLENDER 2-SOFTBOX SETUP)
+   STUDIO LIGHTING SETUP (OPTIMIZED BLENDER 2-SOFTBOX SETUP)
    ============================================================ */
 // Soft ambient illumination
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
 scene.add(ambientLight);
 
-// Left Studio Softbox (Large Area Light match)
+// Left Studio Softbox (Primary Key Shadow Light)
 const leftSoftbox = new THREE.DirectionalLight(0xfffaee, 1.4);
 leftSoftbox.position.set(-5.5, 5.5, 4.5);
 leftSoftbox.castShadow = true;
-leftSoftbox.shadow.mapSize.width = 2048;
-leftSoftbox.shadow.mapSize.height = 2048;
-leftSoftbox.shadow.camera.near = 0.5;
-leftSoftbox.shadow.camera.far = 25;
-leftSoftbox.shadow.camera.left = -6;
-leftSoftbox.shadow.camera.right = 6;
-leftSoftbox.shadow.camera.top = 6;
-leftSoftbox.shadow.camera.bottom = -4;
+leftSoftbox.shadow.mapSize.width = 1024;
+leftSoftbox.shadow.mapSize.height = 1024;
+leftSoftbox.shadow.camera.near = 1.0;
+leftSoftbox.shadow.camera.far = 20;
+leftSoftbox.shadow.camera.left = -5.5;
+leftSoftbox.shadow.camera.right = 5.5;
+leftSoftbox.shadow.camera.top = 5.5;
+leftSoftbox.shadow.camera.bottom = -3.5;
 leftSoftbox.shadow.bias = -0.0001;
 leftSoftbox.shadow.normalBias = 0.02;
-leftSoftbox.shadow.radius = 3.0; // Soft studio shadow edges
+leftSoftbox.shadow.radius = 2.0;
 scene.add(leftSoftbox);
 
-// Right Studio Softbox (Large Area Light match)
+// Right Studio Softbox (Fill Light - No redundant shadow pass for maximum FPS)
 const rightSoftbox = new THREE.DirectionalLight(0xf0f5ff, 1.4);
 rightSoftbox.position.set(5.5, 5.5, 4.5);
-rightSoftbox.castShadow = true;
-rightSoftbox.shadow.mapSize.width = 2048;
-rightSoftbox.shadow.mapSize.height = 2048;
-rightSoftbox.shadow.camera.near = 0.5;
-rightSoftbox.shadow.camera.far = 25;
-rightSoftbox.shadow.camera.left = -6;
-rightSoftbox.shadow.camera.right = 6;
-rightSoftbox.shadow.camera.top = 6;
-rightSoftbox.shadow.camera.bottom = -4;
-rightSoftbox.shadow.bias = -0.0001;
-rightSoftbox.shadow.normalBias = 0.02;
-rightSoftbox.shadow.radius = 3.0;
+rightSoftbox.castShadow = false;
 scene.add(rightSoftbox);
 
 // Front Fill Light
@@ -109,6 +98,8 @@ const player = {
   velocity: new THREE.Vector3(0, 0, 0),
   pitch: -0.03,
   yaw: 0.0,
+  targetPitch: -0.03,
+  targetYaw: 0.0,
   radius: 0.35,
   height: 1.55,
   onGround: true
@@ -131,6 +122,8 @@ function resetPlayerView() {
   player.velocity.set(0, 0, 0);
   player.pitch = -0.03;
   player.yaw = 0.0;
+  player.targetPitch = -0.03;
+  player.targetYaw = 0.0;
   updateCamera();
 }
 
@@ -156,20 +149,18 @@ window.addEventListener('mouseup', () => {
 
 window.addEventListener('mousemove', (e) => {
   if (isPointerLocked) {
-    player.yaw -= e.movementX * 0.0014;
-    player.pitch -= e.movementY * 0.0014;
-    player.pitch = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, player.pitch));
-    updateCamera();
+    player.targetYaw -= e.movementX * 0.0016;
+    player.targetPitch -= e.movementY * 0.0016;
+    player.targetPitch = Math.max(-Math.PI / 2 + 0.08, Math.min(Math.PI / 2 - 0.08, player.targetPitch));
   } else if (isDragging) {
     const deltaX = e.clientX - mouseStartX;
     const deltaY = e.clientY - mouseStartY;
     mouseStartX = e.clientX;
     mouseStartY = e.clientY;
 
-    player.yaw -= deltaX * 0.0016;
-    player.pitch -= deltaY * 0.0016;
-    player.pitch = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, player.pitch));
-    updateCamera();
+    player.targetYaw -= deltaX * 0.0020;
+    player.targetPitch -= deltaY * 0.0020;
+    player.targetPitch = Math.max(-Math.PI / 2 + 0.08, Math.min(Math.PI / 2 - 0.08, player.targetPitch));
   }
 });
 
@@ -199,10 +190,9 @@ renderer.domElement.addEventListener('touchmove', (e) => {
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
 
-    player.yaw -= deltaX * 0.0018;
-    player.pitch -= deltaY * 0.0018;
-    player.pitch = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, player.pitch));
-    updateCamera();
+    player.targetYaw -= deltaX * 0.0022;
+    player.targetPitch -= deltaY * 0.0022;
+    player.targetPitch = Math.max(-Math.PI / 2 + 0.08, Math.min(Math.PI / 2 - 0.08, player.targetPitch));
   }
 }, { passive: true });
 
@@ -350,13 +340,16 @@ function tryLoad() {
 
       model.traverse((child) => {
         if (child.isMesh) {
-          child.castShadow = true;
+          child.frustumCulled = true;
+          const objName = (child.name || '').toLowerCase();
+          const isMainStructure = objName.includes('podium') || objName.includes('wall') || objName.includes('housing') || objName.includes('cover') || objName.includes('motor') || objName.includes('gearbox') || objName.includes('stator');
+          child.castShadow = isMainStructure;
           child.receiveShadow = true;
 
           if (child.material) {
-            child.material.side = THREE.DoubleSide;
             const matName = (child.material.name || '').toLowerCase();
-            const objName = (child.name || '').toLowerCase();
+            const isThinGraphic = !!child.material.map || objName.includes('graphic') || objName.includes('print') || objName.includes('canvas') || objName.includes('logo') || objName.includes('slogan') || objName.includes('plate') || objName.includes('plaque');
+            child.material.side = isThinGraphic ? THREE.DoubleSide : THREE.FrontSide;
 
             // PBR adjustments strictly matching cycles_render.png
             if (!child.material.map) {
@@ -469,6 +462,10 @@ function updatePlayerPhysics(delta) {
   // STRICT VISITOR BOUNDS: No walking off into void or behind wall
   player.pos.x = THREE.MathUtils.clamp(player.pos.x, -3.8, 3.8); // Left/right perimeter
   player.pos.z = THREE.MathUtils.clamp(player.pos.z, 0.8, 5.8);  // In front of stand only
+
+  // Smooth camera rotation interpolation (buttery fluid 60-120fps)
+  player.yaw = THREE.MathUtils.lerp(player.yaw, player.targetYaw, 0.25);
+  player.pitch = THREE.MathUtils.lerp(player.pitch, player.targetPitch, 0.25);
 
   updateCamera();
 }
