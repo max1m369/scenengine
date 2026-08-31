@@ -1,4 +1,4 @@
-﻿import * as THREE from 'three';
+import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 /* ============================================================
@@ -359,17 +359,32 @@ function tryLoad() {
             const objName = (child.name || '').toLowerCase();
 
             // PBR adjustments strictly matching cycles_render.png
-            if (matName.includes('copper')) {
-              child.material.metalness = 0.90;
-              child.material.roughness = 0.25;
-              child.material.color = new THREE.Color(0xd67e48);
-            } else if (matName.includes('darksteel') || matName.includes('motordark') || matName.includes('gearboxdark')) {
-              child.material.metalness = 0.85;
-              child.material.roughness = 0.35;
-            } else if (matName.includes('steel') || matName.includes('metallic') || matName.includes('inverter')) {
-              child.material.metalness = 0.90;
-              child.material.roughness = 0.22;
-            } else if (matName.includes('supportglass')) {
+            if (!child.material.map) {
+              if (matName.includes('copper')) {
+                child.material.metalness = 0.90;
+                child.material.roughness = 0.25;
+                child.material.color = new THREE.Color(0xd67e48);
+              } else if (matName.includes('darksteel') || matName.includes('motordark') || matName.includes('gearboxdark')) {
+                child.material.metalness = 0.85;
+                child.material.roughness = 0.35;
+              } else if (matName.includes('steel') || matName.includes('metallic') || matName.includes('inverter')) {
+                child.material.metalness = 0.90;
+                child.material.roughness = 0.22;
+              } else if (matName.includes('podiumnavy')) {
+                child.material.color = new THREE.Color(0x053a78);
+                child.material.roughness = 0.38;
+                child.material.metalness = 0.08;
+              } else if (matName.includes('podiumtop') || matName.includes('floor')) {
+                child.material.color = new THREE.Color(0xf4f6f8);
+                child.material.roughness = 0.25;
+                child.material.metalness = 0.04;
+              } else if (matName.includes('wall')) {
+                child.material.color = new THREE.Color(0xf0f2f5);
+                child.material.roughness = 0.55;
+              }
+            }
+
+            if (matName.includes('supportglass')) {
               child.material.transparent = true;
               child.material.opacity = 0.35;
               child.material.roughness = 0.05;
@@ -380,17 +395,6 @@ function tryLoad() {
             } else if (matName.includes('glowblue') || objName.includes('underglow')) {
               child.material.emissive = new THREE.Color(0x00d2ff);
               child.material.emissiveIntensity = 1.2;
-            } else if (matName.includes('podiumnavy')) {
-              child.material.color = new THREE.Color(0x053a78);
-              child.material.roughness = 0.38;
-              child.material.metalness = 0.08;
-            } else if (matName.includes('podiumtop') || matName.includes('floor')) {
-              child.material.color = new THREE.Color(0xf4f6f8);
-              child.material.roughness = 0.25;
-              child.material.metalness = 0.04;
-            } else if (matName.includes('wall')) {
-              child.material.color = new THREE.Color(0xf0f2f5);
-              child.material.roughness = 0.55;
             }
           }
         }
