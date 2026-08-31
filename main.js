@@ -399,6 +399,11 @@ function tryLoad() {
       if (xhr.lengthComputable && xhr.total > 0) {
         const percent = Math.min(99, Math.round((xhr.loaded / xhr.total) * 100));
         if (progressBar) progressBar.style.width = percent + '%';
+        if (loadingStatus) loadingStatus.textContent = `⚡ Загрузка стенда (${percent}%)...`;
+      } else if (xhr.loaded > 0) {
+        const mb = (xhr.loaded / (1024 * 1024)).toFixed(1);
+        if (loadingStatus) loadingStatus.textContent = `⚡ Загрузка: ${mb} МБ...`;
+        if (progressBar) progressBar.style.width = Math.min(95, Math.round((xhr.loaded / 10474152) * 100)) + '%';
       }
     },
     (error) => {

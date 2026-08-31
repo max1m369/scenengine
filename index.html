@@ -2,11 +2,23 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>3D-прогулка: Выставочный стенд Росатом</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for(let registration of registrations) {
+          registration.unregister();
+        }
+      });
+    }
+  </script>
   <script type="module" src="./main.js"></script>
   <link rel="stylesheet" href="./style.css">
 </head>
@@ -22,7 +34,7 @@
   <!-- Top Progress Bar (Non-blocking) -->
   <div id="top-loading-bar" class="top-loading-bar">
     <div id="progress-bar" class="top-progress-fill"></div>
-    <div id="loading-status" class="top-progress-text">⚡ Загрузка выставочного стенда...</div>
+    <div id="loading-status" class="top-progress-text">⚡ Загрузка стенда (0%)...</div>
   </div>
 
   <!-- Minimal Clean HUD Layer -->
