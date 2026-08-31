@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+﻿import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 /* ============================================================
@@ -17,46 +17,33 @@ scene.fog = new THREE.FogExp2(STUDIO_BG_COLOR, 0.012);
 // Standard Human Eye Height = 1.6m, architectural FOV 48
 const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.05, 100);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+const renderer = new THREE.WebGLRenderer({
+  antialias: true,
+  powerPreference: 'high-performance'
+});
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.shadowMap.autoUpdate = false;
-renderer.shadowMap.needsUpdate = true;
+renderer.shadowMap.enabled = false; // Disabled dynamic shadow pass for instant 60-120+ FPS
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.0;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 container.appendChild(renderer.domElement);
 
 /* ============================================================
-   STUDIO LIGHTING SETUP (ULTRA-HIGH PERFORMANCE STUDIO SETUP)
+   STUDIO LIGHTING SETUP (PRECISE, CRISP, HIGH-FPS)
    ============================================================ */
 // Soft ambient illumination
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.95);
+const ambientLight = new THREE.AmbientLight(0xffffff, 1.05);
 scene.add(ambientLight);
 
-// Left Studio Softbox (Primary Key Shadow Light)
+// Left Studio Softbox (Primary Key Light)
 const leftSoftbox = new THREE.DirectionalLight(0xfffaee, 1.4);
 leftSoftbox.position.set(-5.5, 5.5, 4.5);
-leftSoftbox.castShadow = true;
-leftSoftbox.shadow.mapSize.width = 1024;
-leftSoftbox.shadow.mapSize.height = 1024;
-leftSoftbox.shadow.camera.near = 1.0;
-leftSoftbox.shadow.camera.far = 20;
-leftSoftbox.shadow.camera.left = -5.5;
-leftSoftbox.shadow.camera.right = 5.5;
-leftSoftbox.shadow.camera.top = 5.5;
-leftSoftbox.shadow.camera.bottom = -3.5;
-leftSoftbox.shadow.bias = -0.0001;
-leftSoftbox.shadow.normalBias = 0.02;
-leftSoftbox.shadow.radius = 2.0;
 scene.add(leftSoftbox);
 
-// Right Studio Softbox (Fill Light - No redundant shadow pass for maximum FPS)
-const rightSoftbox = new THREE.DirectionalLight(0xf0f5ff, 1.4);
+// Right Studio Softbox (Fill Light)
+const rightSoftbox = new THREE.DirectionalLight(0xf0f5ff, 1.3);
 rightSoftbox.position.set(5.5, 5.5, 4.5);
-rightSoftbox.castShadow = false;
 scene.add(rightSoftbox);
 
 // Front Fill Light
@@ -69,12 +56,10 @@ const rimLight = new THREE.DirectionalLight(0xffffff, 0.5);
 rimLight.position.set(0, 7.0, -3.0);
 scene.add(rimLight);
 
-// Top Downlight on Truss Beam (High-efficiency directional beam)
-const trussLight = new THREE.DirectionalLight(0xffffff, 1.2);
+// Top Downlight on Truss Beam
+const trussLight = new THREE.DirectionalLight(0xffffff, 1.0);
 trussLight.position.set(0, 4.0, 0.5);
-trussLight.target.position.set(0, 0.8, -0.3);
 scene.add(trussLight);
-scene.add(trussLight.target);
 
 // Smooth studio showroom floor (NO GRID)
 const studioFloorGeo = new THREE.PlaneGeometry(80, 80, 1, 1);
@@ -86,7 +71,6 @@ const studioFloorMat = new THREE.MeshStandardMaterial({
 const studioFloor = new THREE.Mesh(studioFloorGeo, studioFloorMat);
 studioFloor.rotation.x = -Math.PI / 2;
 studioFloor.position.y = -0.001;
-studioFloor.receiveShadow = true;
 scene.add(studioFloor);
 
 /* ============================================================
@@ -97,8 +81,6 @@ const player = {
   velocity: new THREE.Vector3(0, 0, 0),
   pitch: -0.03,
   yaw: 0.0,
-  targetPitch: -0.03,
-  targetYaw: 0.0,
   radius: 0.35,
   height: 1.55,
   onGround: true
@@ -121,14 +103,12 @@ function resetPlayerView() {
   player.velocity.set(0, 0, 0);
   player.pitch = -0.03;
   player.yaw = 0.0;
-  player.targetPitch = -0.03;
-  player.targetYaw = 0.0;
   updateCamera();
 }
 
 resetPlayerView();
 
-// Mouse Look (Drag or Pointer Lock)
+// Direct, Instant Mouse Look (Natural Direction: Drag Right -> Pan Right, Zero Latency)
 let isPointerLocked = false;
 let isDragging = false;
 let mouseStartX = 0;
@@ -148,18 +128,20 @@ window.addEventListener('mouseup', () => {
 
 window.addEventListener('mousemove', (e) => {
   if (isPointerLocked) {
-    player.targetYaw += e.movementX * 0.0016;
-    player.targetPitch += e.movementY * 0.0016;
-    player.targetPitch = Math.max(-Math.PI / 2 + 0.08, Math.min(Math.PI / 2 - 0.08, player.targetPitch));
+    player.yaw += e.movementX * 0.0020;
+    player.pitch += e.movementY * 0.0020;
+    player.pitch = Math.max(-Math.PI / 2 + 0.08, Math.min(Math.PI / 2 - 0.08, player.pitch));
+    updateCamera();
   } else if (isDragging) {
     const deltaX = e.clientX - mouseStartX;
     const deltaY = e.clientY - mouseStartY;
     mouseStartX = e.clientX;
     mouseStartY = e.clientY;
 
-    player.targetYaw += deltaX * 0.0022;
-    player.targetPitch += deltaY * 0.0022;
-    player.targetPitch = Math.max(-Math.PI / 2 + 0.08, Math.min(Math.PI / 2 - 0.08, player.targetPitch));
+    player.yaw += deltaX * 0.0025;
+    player.pitch += deltaY * 0.0025;
+    player.pitch = Math.max(-Math.PI / 2 + 0.08, Math.min(Math.PI / 2 - 0.08, player.pitch));
+    updateCamera();
   }
 });
 
@@ -189,9 +171,10 @@ renderer.domElement.addEventListener('touchmove', (e) => {
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
 
-    player.targetYaw += deltaX * 0.0024;
-    player.targetPitch += deltaY * 0.0024;
-    player.targetPitch = Math.max(-Math.PI / 2 + 0.08, Math.min(Math.PI / 2 - 0.08, player.targetPitch));
+    player.yaw += deltaX * 0.0028;
+    player.pitch += deltaY * 0.0028;
+    player.pitch = Math.max(-Math.PI / 2 + 0.08, Math.min(Math.PI / 2 - 0.08, player.pitch));
+    updateCamera();
   }
 }, { passive: true });
 
@@ -251,43 +234,35 @@ const obstacles = [
 
 function resolveCollisions(pos, radius) {
   for (const obs of obstacles) {
-    if (pos.y - player.height + 0.2 < obs.maxY && pos.y > obs.minY) {
-      const expandedMinX = obs.minX - radius;
-      const expandedMaxX = obs.maxX + radius;
-      const expandedMinZ = obs.minZ - radius;
-      const expandedMaxZ = obs.maxZ + radius;
+    if (pos.y < obs.maxY + 0.1) {
+      const closestX = Math.max(obs.minX, Math.min(pos.x, obs.maxX));
+      const closestZ = Math.max(obs.minZ, Math.min(pos.z, obs.maxZ));
 
-      if (pos.x > expandedMinX && pos.x < expandedMaxX && pos.z > expandedMinZ && pos.z < expandedMaxZ) {
-        const dLeft = pos.x - expandedMinX;
-        const dRight = expandedMaxX - pos.x;
-        const dBack = pos.z - expandedMinZ;
-        const dFront = expandedMaxZ - pos.z;
+      const dx = pos.x - closestX;
+      const dz = pos.z - closestZ;
+      const distSq = dx * dx + dz * dz;
 
-        const minOverlap = Math.min(dLeft, dRight, dBack, dFront);
-
-        if (minOverlap === dLeft) pos.x = expandedMinX;
-        else if (minOverlap === dRight) pos.x = expandedMaxX;
-        else if (minOverlap === dFront) pos.z = expandedMaxZ;
-        else if (minOverlap === dBack) pos.z = expandedMinZ;
+      if (distSq < radius * radius && distSq > 0.00001) {
+        const dist = Math.sqrt(distSq);
+        const overlap = radius - dist;
+        pos.x += (dx / dist) * overlap;
+        pos.z += (dz / dist) * overlap;
       }
     }
   }
 }
 
 /* ============================================================
-   UI BUTTONS & TOP PROGRESS BAR
+   UI INTERACTIONS & HUD CONTROLS
    ============================================================ */
-const topLoadingBar = document.getElementById('top-loading-bar');
-const progressBar = document.getElementById('progress-bar');
-const loadingStatus = document.getElementById('loading-status');
-const fpsCounter = document.getElementById('fps-counter');
 const resetCamBtn = document.getElementById('reset-cam-btn');
-const fullscreenBtn = document.getElementById('fullscreen-btn');
-
 if (resetCamBtn) {
-  resetCamBtn.addEventListener('click', resetPlayerView);
+  resetCamBtn.addEventListener('click', () => {
+    resetPlayerView();
+  });
 }
 
+const fullscreenBtn = document.getElementById('fullscreen-btn');
 if (fullscreenBtn) {
   fullscreenBtn.addEventListener('click', () => {
     if (!document.fullscreenElement) {
@@ -298,13 +273,18 @@ if (fullscreenBtn) {
   });
 }
 
+const topLoadingBar = document.getElementById('top-loading-bar');
+const progressBar = document.getElementById('progress-bar');
+const loadingStatus = document.getElementById('loading-status');
+const fpsCounter = document.getElementById('fps-counter');
+
 function hideLoadingBar() {
   if (progressBar) progressBar.style.width = '100%';
   if (loadingStatus) loadingStatus.textContent = '⚡ Стенд загружен!';
 
   setTimeout(() => {
     if (topLoadingBar) topLoadingBar.classList.add('hidden');
-  }, 400);
+  }, 300);
 }
 
 /* ============================================================
@@ -340,13 +320,12 @@ function tryLoad() {
       model.traverse((child) => {
         if (child.isMesh) {
           child.frustumCulled = true;
-          const objName = (child.name || '').toLowerCase();
-          const isMainStructure = objName.includes('podium') || objName.includes('wall') || objName.includes('housing') || objName.includes('cover') || objName.includes('motor') || objName.includes('gearbox') || objName.includes('stator');
-          child.castShadow = isMainStructure;
-          child.receiveShadow = true;
+          child.matrixAutoUpdate = false;
+          child.updateMatrix();
 
           if (child.material) {
             const matName = (child.material.name || '').toLowerCase();
+            const objName = (child.name || '').toLowerCase();
             const isThinGraphic = !!child.material.map || objName.includes('graphic') || objName.includes('print') || objName.includes('canvas') || objName.includes('logo') || objName.includes('slogan') || objName.includes('plate') || objName.includes('plaque');
             child.material.side = isThinGraphic ? THREE.DoubleSide : THREE.FrontSide;
 
@@ -392,7 +371,6 @@ function tryLoad() {
         }
       });
 
-      renderer.shadowMap.needsUpdate = true;
       hideLoadingBar();
     },
     (xhr) => {
@@ -468,10 +446,6 @@ function updatePlayerPhysics(delta) {
   player.pos.x = THREE.MathUtils.clamp(player.pos.x, -3.8, 3.8); // Left/right perimeter
   player.pos.z = THREE.MathUtils.clamp(player.pos.z, 0.8, 5.8);  // In front of stand only
 
-  // Smooth camera rotation interpolation (buttery fluid 60-120fps)
-  player.yaw = THREE.MathUtils.lerp(player.yaw, player.targetYaw, 0.25);
-  player.pitch = THREE.MathUtils.lerp(player.pitch, player.targetPitch, 0.25);
-
   updateCamera();
 }
 
@@ -508,5 +482,5 @@ window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 });
