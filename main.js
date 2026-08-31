@@ -156,8 +156,8 @@ window.addEventListener('mouseup', () => {
 
 window.addEventListener('mousemove', (e) => {
   if (isPointerLocked) {
-    player.yaw -= e.movementX * 0.0025;
-    player.pitch -= e.movementY * 0.0025;
+    player.yaw -= e.movementX * 0.0014;
+    player.pitch -= e.movementY * 0.0014;
     player.pitch = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, player.pitch));
     updateCamera();
   } else if (isDragging) {
@@ -166,8 +166,8 @@ window.addEventListener('mousemove', (e) => {
     mouseStartX = e.clientX;
     mouseStartY = e.clientY;
 
-    player.yaw -= deltaX * 0.0035;
-    player.pitch -= deltaY * 0.0035;
+    player.yaw -= deltaX * 0.0016;
+    player.pitch -= deltaY * 0.0016;
     player.pitch = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, player.pitch));
     updateCamera();
   }
@@ -199,8 +199,8 @@ renderer.domElement.addEventListener('touchmove', (e) => {
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
 
-    player.yaw -= deltaX * 0.004;
-    player.pitch -= deltaY * 0.004;
+    player.yaw -= deltaX * 0.0018;
+    player.pitch -= deltaY * 0.0018;
     player.pitch = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, player.pitch));
     updateCamera();
   }
@@ -322,11 +322,11 @@ function hideLoadingBar() {
    LOAD 3D GLTF MODEL & REFINE PBR MATERIALS
    ============================================================ */
 const gltfLoader = new GLTFLoader();
+const cacheBust = Date.now();
 const candidateUrls = [
-  new URL('./booth.glb', import.meta.url).href,
-  './booth.glb',
-  'booth.glb',
-  '/scenengine/booth.glb'
+  `./booth.glb?v=${cacheBust}`,
+  `booth.glb?v=${cacheBust}`,
+  `/scenengine/booth.glb?v=${cacheBust}`
 ];
 
 let urlIndex = 0;
